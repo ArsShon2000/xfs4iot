@@ -1,0 +1,57 @@
+# Doxyfile.in — шаблон для CMake
+# Все переменные вида @VARIABLE@ будут заменены CMake
+
+# Основные настройки проекта
+PROJECT_NAME           = "@PROJECT_NAME@"
+PROJECT_NUMBER         = "@PROJECT_VERSION@"
+PROJECT_BRIEF          = "@PROJECT_BRIEF@"
+
+# Директории
+OUTPUT_DIRECTORY       = "@CMAKE_CURRENT_BINARY_DIR@/docs"
+INPUT                  = "@CMAKE_SOURCE_DIR@/include" "@CMAKE_SOURCE_DIR@/source"
+FILE_PATTERNS          = *.h *.hpp *.cpp *.cc *.cxx
+RECURSIVE              = YES
+
+# Генерация
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+
+HTML_OUTPUT            = html
+HTML_COLORSTYLE        = LIGHT  # или DARK
+HTML_EXTRA_STYLESHEET  = "@CMAKE_SOURCE_DIR@/docs/doxygen-awesome.css"
+
+# Графики (требует Graphviz)
+HAVE_DOT               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DOT_IMAGE_FORMAT       = svg
+DOT_TRANSPARENT        = YES
+INTERACTIVE_SVG        = YES
+
+# Поведение
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+SOURCE_BROWSER         = YES
+GENERATE_TREEVIEW      = YES
+USE_MDFILE_AS_MAINPAGE = "@CMAKE_SOURCE_DIR@/README.md"
+
+# Markdown
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+TOC_INCLUDE_HEADINGS   = 5
+
+# Оптимизация под C++
+OPTIMIZE_OUTPUT_FOR_C  = NO
+BUILTIN_STL_SUPPORT    = YES
+
+# Поиск
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+
+# Предупреждения
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+WARNINGS               = YES

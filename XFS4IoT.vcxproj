@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{2f302799-8ed5-4ce9-8779-4e7a193683e2}</ProjectGuid>
+    <RootNamespace>XFS4IoT</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="app\XFS4IoT.cpp" />
+    <ClCompile Include="Devices\CashAcceptorSample\CashAcceptorSample.cpp" />
+    <ClCompile Include="Devices\CIM.DORS210\DevicePort\DevicePort.cpp" />
+    <ClCompile Include="Devices\CIM.DORS210\Dors_210BA.cpp" />
+    <ClCompile Include="Devices\CIM.DORS210\Identification.cpp" />
+    <ClCompile Include="Devices\CIM.DORS210\SearchDevices\SearchDevices.cpp" />
+    <ClCompile Include="Devices\HW\DevicePort\DevicePort.cpp" />
+    <ClCompile Include="Devices\HW\Dors_210BA.cpp" />
+    <ClCompile Include="Devices\HW\Identification.cpp" />
+    <ClCompile Include="Devices\HW\SearchDevices\SearchDevices.cpp" />
+    <ClCompile Include="framework\Common\AsciiHexConversions\AsciiHexConversions.cpp" />
+    <ClCompile Include="framework\core\Events.hpp" />
+    <ClCompile Include="framework\core\Logger\Zipper\miniz\miniz.c" />
+    <ClCompile Include="framework\core\Logger\Zipper\Zipper.cpp" />
+    <ClCompile Include="framework\core\MessageRegistry.hpp" />
+    <ClCompile Include="framework\core\MessageTypeInfo.hpp" />
+    <ClCompile Include="framework\core\Persistent\PersistentDatasHandler.cpp" />
+    <ClCompile Include="framework\core\SettingModule\SettingModule.cpp" />
+    <ClCompile Include="framework\server\ClientConnection.cpp" />
+    <ClCompile Include="framework\server\CommandDispatcher.cpp" />
+    <ClCompile Include="framework\server\CommandQueue.cpp" />
+    <ClCompile Include="framework\server\EndPoint.cpp" />
+    <ClCompile Include="framework\server\GetServiceHandler.cpp" />
+    <ClCompile Include="framework\server\IJsonSchemaValidator.hpp" />
+    <ClCompile Include="framework\server\ServiceConfiguration.cpp" />
+    <ClCompile Include="framework\server\ServicePublisher.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceClass.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceProvider.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInStartHandler.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\ConfigureNoteTypesHandler.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashManagementServiceProvider\CashManagementServiceClass.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashManagementServiceProvider\Handlers\GetBankNoteTypesHandler.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashManagementServiceProvider\Handlers\ResetHandler.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CommonServiceProvider\CommonServiceClass.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CommonServiceProvider\Handlers\CapabilitiesHandler.cpp" />
+    <ClCompile Include="framework\ServiceClasses\INFO_MODULES\GetinfoBanknoteTypes\GetinfoBanknoteTypes.cpp" />
+    <ClCompile Include="framework\ServiceClasses\INFO_MODULES\GetInfoStatus\GetInfoStatus.cpp" />
+    <ClCompile Include="framework\ServiceClasses\Managers\EscrowManager\EscrowManager.cpp" />
+    <ClCompile Include="framework\ServiceClasses\Managers\NotesInhibitManager\NotesInhibitManager.cpp" />
+    <ClCompile Include="framework\ServiceClasses\Managers\PowerUpManager\PowerUpManager.cpp" />
+    <ClCompile Include="framework\ServiceClasses\StorageServiceProvider\CashUnit.cpp" />
+    <ClCompile Include="framework\ServiceClasses\StorageServiceProvider\Events\StorageErrorCommandEvent.cpp" />
+    <ClCompile Include="framework\ServiceClasses\StorageServiceProvider\StorageServiceClass.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Devices\CashAcceptorSample\CashAcceptorSample.hpp" />
+    <ClInclude Include="Devices\CIM.DORS210\DevicePort\DevicePort.hpp" />
+    <ClInclude Include="Devices\CIM.DORS210\Dors_210BA.h" />
+    <ClInclude Include="Devices\CIM.DORS210\Identification.h" />
+    <ClInclude Include="Devices\CIM.DORS210\SearchDevices\SearchDevices.h" />
+    <ClInclude Include="Devices\HW\DevicePort\DevicePort.hpp" />
+    <ClInclude Include="Devices\HW\Dors_210BA.h" />
+    <ClInclude Include="Devices\HW\Identification.h" />
+    <ClInclude Include="Devices\HW\SearchDevices\SearchDevices.h" />
+    <ClInclude Include="framework\Common\AsciiHexConversions\AsciiHexConversions.h" />
+    <ClInclude Include="framework\core\Acknowledge.hpp" />
+    <ClInclude Include="framework\core\Attributes.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\CashAcceptorSchemas.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\CashInCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\CashInEndCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\CashInRollbackCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Commands\CashInStartCommand.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Completions\CashInStartCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\CashUnitCountCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Commands\ConfigureNoteTypesCommand.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Completions\ConfigureNoteTypesCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\ConfigureNoteReaderCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\DeviceLockControlCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Events\InputRefuseEvent.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Events\InsertItemsEvent.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Events\SubCashInEvent.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\PreparePresentCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\PresentMediaCompletion.hpp" />
+    <ClInclude Include="framework\core\CashDispenser\Events\DelayedDispenseEvent.hpp" />
+    <ClInclude Include="framework\core\CashDispenser\Events\IncompleteDispenseEvent.hpp" />
+    <ClInclude Include="framework\core\CashDispenser\Events\StartDispenseEvent.hpp" />
+    <ClInclude Include="framework\core\CashManagement\CashManagementSchemas.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Commands\ResetCommand.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\CalibrateCashUnitCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Commands\GetBankNoteTypesCommand.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\GetBankNoteTypesCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\GetTellerInfoCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\ResetCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\RetractCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\SetTellerInfoCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Events\IncompleteRetractEvent.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Events\InfoAvailableEvent.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Events\ItemsInsertedEvent.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Events\ItemsPresentedEvent.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Events\ItemsTakenEvent.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Events\MediaDetectedEvent.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Events\NoteErrorEvent.hpp" />
+    <ClInclude Include="framework\core\Command.hpp" />
+    <ClInclude Include="framework\core\common\Commands\CapabilitiesCommand.hpp" />
+    <ClInclude Include="framework\core\common\Completions\CapabilitiesCompletion.hpp" />
+    <ClInclude Include="framework\core\common\Completions\MessagePayload.hpp" />
+    <ClInclude Include="framework\core\common\Events\ErrorEvent.hpp" />
+    <ClInclude Include="framework\core\common\Events\NonceClearedEvent.hpp" />
+    <ClInclude Include="framework\core\common\Events\StatusChangedEvent.hpp" />
+    <ClInclude Include="framework\core\common\MessageHeader.hpp" />
+    <ClInclude Include="framework\core\common\StateMachine\StateMachine.hpp" />
+    <ClInclude Include="framework\core\Events\PropertyChangedEventArgs.hpp" />
+    <ClInclude Include="framework\core\Exceptions.hpp" />
+    <ClInclude Include="framework\core\JsonHelpers.hpp" />
+    <ClInclude Include="framework\core\JSON\JsonExtensions.hpp" />
+    <ClInclude Include="framework\core\Logger\LoggerLevels.hpp" />
+    <ClInclude Include="framework\core\Logger\LoggerRotate.hpp" />
+    <ClInclude Include="framework\core\Logger\Zipper\miniz\miniz.h" />
+    <ClInclude Include="framework\core\Logger\Zipper\Zipper.hpp" />
+    <ClInclude Include="framework\core\Message.hpp" />
+    <ClInclude Include="framework\core\Persistent\PersistentDatasHandler.hpp" />
+    <ClInclude Include="framework\core\ServicePublisher\Commands\GetServicesCommand.hpp" />
+    <ClInclude Include="framework\core\ServicePublisher\Completions\GetServicesCompletion.hpp" />
+    <ClInclude Include="framework\core\ServicePublisher\ServiceClass.hpp" />
+    <ClInclude Include="framework\core\SettingModule\SettingModule.h" />
+    <ClInclude Include="framework\core\Storage\Completions\EndExchangeCompletion.hpp" />
+    <ClInclude Include="framework\core\Storage\Completions\SetStorageCompletion.hpp" />
+    <ClInclude Include="framework\core\Storage\Completions\StartExchangeCompletion.hpp" />
+    <ClInclude Include="framework\core\Storage\Events\CountsChangedEvent.hpp" />
+    <ClInclude Include="framework\core\Storage\Events\StorageChangedEvent.hpp" />
+    <ClInclude Include="framework\core\Storage\Events\StorageErrorEvent.hpp" />
+    <ClInclude Include="framework\core\Storage\Events\StorageThresholdEvent.hpp" />
+    <ClInclude Include="framework\core\Storage\StorageSchemas.hpp" />
+    <ClInclude Include="framework\core\Validation.hpp" />
+    <ClInclude Include="framework\server\GetServiceHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceProvider.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashAcceptorEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInCommonCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInEndCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInRollbackCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInStartEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashUnitCountCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\PreparePresentCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInStartHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\ConfigureNoteTypesHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\ICashAcceptorService.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\CashInStatus.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\CashInStatusClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\CashManagementServiceClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\DeviceParameters.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\CalibrateCashUnitCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\CashManagementEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\ItemErrorCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\ItemInfoAvailableCommandEvent.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\ResetCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\ResetEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\RetractCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\StorageErrorCommonCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Events\StorageItemErrorCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Handlers\GetBankNoteTypesHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\Handlers\ResetHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\ICashManagementService.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\ItemClassificationClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\CashAcceptorCapabilitiesClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\CommonCapabilitiesClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\CommonServiceClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\DeviceParameters.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\Handlers\CapabilitiesHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\ICommonService.hpp" />
+    <ClInclude Include="framework\ServiceClasses\HasFlagHelper.hpp" />
+    <ClInclude Include="framework\ServiceClasses\INFO_MODULES\GetinfoBanknoteTypes\GetinfoBanknoteTypes.h" />
+    <ClInclude Include="framework\ServiceClasses\INFO_MODULES\GetInfoStatus\GetInfoStatus.h" />
+    <ClInclude Include="framework\ServiceClasses\Managers\EscrowManager\EscrowManager.h" />
+    <ClInclude Include="framework\ServiceClasses\Managers\NotesInhibitManager\NotesInhibitManager.hpp" />
+    <ClInclude Include="framework\ServiceClasses\Managers\PowerUpManager\PowerUpManager.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashInEndEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashInEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashInRollbackEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashInStartEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashUnitCountEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\IPreparePresentEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\IReplenishEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashDispanser\ICountEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashDispanser\IDispenseEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashDispanser\IRejectEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashDispanser\ITestCashUnitsEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashManagement\ICalibrateCashUnitEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashManagement\IResetEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashManagement\IRetractEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\CashManagementPresentStatus.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\CashUnit.hpp" />
+    <ClInclude Include="framework\core\common\XFSConstants.hpp" />
+    <ClInclude Include="framework\core\Completion.hpp" />
+    <ClInclude Include="framework\core\Configurations.hpp" />
+    <ClInclude Include="framework\core\Contracts.hpp" />
+    <ClInclude Include="framework\core\ICloneable.hpp" />
+    <ClInclude Include="framework\core\IMessageDecoder.hpp" />
+    <ClInclude Include="framework\core\Logger\ConsoleLogger.hpp" />
+    <ClInclude Include="framework\core\Persistent\FilePersistentData.hpp" />
+    <ClInclude Include="framework\core\Persistent\IPersistentData.hpp" />
+    <ClInclude Include="framework\server\DeviceResult.hpp" />
+    <ClInclude Include="framework\server\IServiceConfiguration.hpp" />
+    <ClInclude Include="framework\core\Logger\ILogger.hpp" />
+    <ClInclude Include="framework\core\Logger\LoggerSpdlog.hpp" />
+    <ClInclude Include="framework\core\MessageBase.hpp" />
+    <ClInclude Include="framework\core\MessageDecoder.hpp" />
+    <ClInclude Include="framework\server\ServiceConfiguration.hpp" />
+    <ClInclude Include="framework\server\ServicePublisher.hpp" />
+    <ClInclude Include="framework\server\CancellationSource.hpp" />
+    <ClInclude Include="framework\server\ClientConnection.hpp" />
+    <ClInclude Include="framework\server\CommandDispatcher.hpp" />
+    <ClInclude Include="framework\server\CommandQueue.hpp" />
+    <ClInclude Include="framework\server\EndPoint.hpp" />
+    <ClInclude Include="framework\server\EndpointDetails.hpp" />
+    <ClInclude Include="framework\server\ICommandDispatcher.hpp" />
+    <ClInclude Include="framework\server\ICommandHandler.hpp" />
+    <ClInclude Include="framework\server\IDevice.hpp" />
+    <ClInclude Include="framework\server\IDisposable.hpp" />
+    <ClInclude Include="framework\server\IServiceProvider.hpp" />
+    <ClInclude Include="framework\server\JsonSchemaValidator.hpp" />
+    <ClInclude Include="framework\server\ServiceProvider.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\DeviceParameters.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\ICashAcceptorDevice.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\ICashManagementDevice.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\CashAcceptorStatusClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\CashManagementCapabilitiesClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\CashManagementStatusClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\ICommonDevice.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\StatusBase.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\DeviceParameters.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\Events\StorageErrorCommandEvent.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\IStorageDevice.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\IStorageService.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\StorageChangedBase.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\StorageServiceClass.hpp" />
+    <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\UnitStorageBase.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="framework\core\common\CommonSchemas.hpp" />
+    <None Include="framework\server\IConnection.hpp" />
+    <None Include="framework\ServiceClasses\CashAcceptorServiceProvider\DeviceLockStatusClass.hpp" />
+    <None Include="framework\ServiceClasses\CommonServiceProvider\CommonStatusClass.hpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
