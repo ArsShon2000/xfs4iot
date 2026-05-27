@@ -16,14 +16,16 @@ namespace FS365::HW::Dors {
         boost::asio::serial_port_base::parity::type parity,
         boost::asio::serial_port_base::stop_bits::type stopBits,
         std::shared_ptr<ILogger> logger
-    ) : m_port(std::make_unique<DevicePort>(portName, logger)),
-        m_baudRate(baudRate),
-        m_byteSize(byteSize),
-        m_parity(parity),
-        m_stopBits(stopBits),
-        m_lastState(POLL_RES::Unknown),
-        m_strFirmware("DEFAULT"),
-        m_log(logger) {
+    ) : m_port(std::make_unique<DevicePort>(portName, logger))
+        , m_baudRate(baudRate)
+        , m_byteSize(byteSize)
+        , m_parity(parity)
+        , m_stopBits(stopBits)
+        , m_lastState(POLL_RES::Unknown)
+        , m_strFirmware("DEFAULT")
+        , m_log(logger)
+        , m_bSoftwareConfigurationFault(false)
+    {
 
         
         std::vector<std::string>  ports;
@@ -112,6 +114,7 @@ namespace FS365::HW::Dors {
                 if (RESULT::Ok == Identification(idn)) {
                     m_strFirmware = idn.strPartNumber; // Получаем номер прошивки из идентификационных данных
                     m_log->trace(std::format("{}() - Номер прошивки: {}", __FUNCTION__, m_strFirmware));
+                    m_bSoftwareConfigurationFault = true;
                     return true; // Успешно инициализировано, выходим из цикла
                 }
             }

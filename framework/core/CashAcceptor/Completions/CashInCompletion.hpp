@@ -3,9 +3,9 @@
 #include <string>
 #include <optional>
 #include <memory>
-#include "../common/Completions/MessagePayload.hpp"
-#include "../../core/CashManagement/CashManagementSchemas.hpp"
-#include "../Completion.hpp"
+#include "../../common/Completions/MessagePayload.hpp"
+#include "../../../core/CashManagement/CashManagementSchemas.hpp"
+#include "../../Completion.hpp"
 
 namespace XFS4IoT::CashAcceptor::Completions
 {
@@ -14,7 +14,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 	/// Version: 2.0
 	/// Name: CashAcceptor.CashIn
 	/// </summary>
-	class CashInPayloadData : public XFS4IoT::MessagePayloadBase
+	class CashInCompletionPayloadData : public XFS4IoT::MessagePayloadBase
 	{
 	public:
 		enum class ErrorCodeEnum
@@ -31,7 +31,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 			ShutterNotOpen
 		};
 
-		CashInPayloadData(
+		CashInCompletionPayloadData(
 			std::optional<ErrorCodeEnum> errorCode = std::nullopt,
 			std::shared_ptr<CashManagement::StorageCashCountsClass> items = nullptr)
 			: errorCode_(errorCode)
@@ -71,7 +71,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 		std::shared_ptr<CashManagement::StorageCashCountsClass> items_;
 	};
 
-	class CashInCompletion : public XFS4IoT::Completion<CashInPayloadData>
+	class CashInCompletion : public XFS4IoT::Completion<CashInCompletionPayloadData>
 	{
 	public:
 		static constexpr const char* CompletionName = "CashAcceptor.CashIn";
@@ -81,10 +81,10 @@ namespace XFS4IoT::CashAcceptor::Completions
 		/// </summary>
 		CashInCompletion(
 			int requestId,
-			std::shared_ptr<CashInPayloadData> payload,
+			std::shared_ptr<CashInCompletionPayloadData> payload,
 			MessageHeader::CompletionCodeEnum completionCode,
 			const std::string& errorDescription)
-			: Completion<CashInPayloadData>(
+			: Completion<CashInCompletionPayloadData>(
 				CompletionName,
 				Version,
 				requestId,
@@ -110,28 +110,28 @@ namespace XFS4IoT::CashAcceptor::Completions
 	/// <summary>
 	/// Helper function to convert ErrorCodeEnum to string
 	/// </summary>
-	inline std::string ToString(CashInPayloadData::ErrorCodeEnum code)
+	inline std::string ToString(CashInCompletionPayloadData::ErrorCodeEnum code)
 	{
 		switch (code) {
-		case CashInPayloadData::ErrorCodeEnum::CashUnitError:
+		case CashInCompletionPayloadData::ErrorCodeEnum::CashUnitError:
 			return "cashUnitError";
-		case CashInPayloadData::ErrorCodeEnum::TooManyItems:
+		case CashInCompletionPayloadData::ErrorCodeEnum::TooManyItems:
 			return "tooManyItems";
-		case CashInPayloadData::ErrorCodeEnum::NoItems:
+		case CashInCompletionPayloadData::ErrorCodeEnum::NoItems:
 			return "noItems";
-		case CashInPayloadData::ErrorCodeEnum::ExchangeActive:
+		case CashInCompletionPayloadData::ErrorCodeEnum::ExchangeActive:
 			return "exchangeActive";
-		case CashInPayloadData::ErrorCodeEnum::ShutterNotClosed:
+		case CashInCompletionPayloadData::ErrorCodeEnum::ShutterNotClosed:
 			return "shutterNotClosed";
-		case CashInPayloadData::ErrorCodeEnum::NoCashInActive:
+		case CashInCompletionPayloadData::ErrorCodeEnum::NoCashInActive:
 			return "noCashInActive";
-		case CashInPayloadData::ErrorCodeEnum::PositionNotEmpty:
+		case CashInCompletionPayloadData::ErrorCodeEnum::PositionNotEmpty:
 			return "positionNotEmpty";
-		case CashInPayloadData::ErrorCodeEnum::SafeDoorOpen:
+		case CashInCompletionPayloadData::ErrorCodeEnum::SafeDoorOpen:
 			return "safeDoorOpen";
-		case CashInPayloadData::ErrorCodeEnum::ForeignItemsDetected:
+		case CashInCompletionPayloadData::ErrorCodeEnum::ForeignItemsDetected:
 			return "foreignItemsDetected";
-		case CashInPayloadData::ErrorCodeEnum::ShutterNotOpen:
+		case CashInCompletionPayloadData::ErrorCodeEnum::ShutterNotOpen:
 			return "shutterNotOpen";
 		default:
 			throw std::invalid_argument("Unknown ErrorCodeEnum value");
@@ -140,7 +140,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 
 	inline void to_json(
 		nlohmann::json& j,
-		const CashInPayloadData& p)
+		const CashInCompletionPayloadData& p)
 	{
 		j = nlohmann::json::object();
 

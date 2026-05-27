@@ -34,12 +34,6 @@ namespace XFS4IoTServer
             }
             });
 
-        // In C++, handlers are registered manually via RegisterHandler<MessageType, HandlerType>()
-        // instead of reflection-based discovery used in C#
-        //RegisterHandler<
-        //    XFS4IoT::ServicePublisher::Commands::GetServicesCommand,
-        //    XFS4IoTServer::GetServiceHandler
-        //>(XFS4IoT::XFSConstants::ServiceClass::Publisher);
 
         std::string handlers;
         for (const auto& [type, details] : messageHandlers_) {
@@ -74,7 +68,28 @@ namespace XFS4IoTServer
                     command->Header().Name()));
             }
 
-            // Send acknowledgment
+            // Проверка, поддерживается ли команда и её версия сервисом
+            const auto& cmdName = command->Header().Name();
+            const auto& cmdVersion = command->Header().Version();
+
+            auto itSupported = m_messagesSupported.find(cmdName);
+            if (itSupported == m_messagesSupported.end()) {
+                auto errorMsg = std::format("{} Команда не поддерживается сервисом.", cmdName);
+                co_await handler->HandleError(command,
+                    std::make_exception_ptr(std::runtime_error(errorMsg)));
+                co_return;
+            }
+
+            const auto& supportedInfo = itSupported->second;
+            if (std::ranges::find(supportedInfo.Versions, cmdVersion) == supportedInfo.Versions.end()) {
+                auto errorMsg = std::format("{} Версия команды ({}) не поддерживается сервисом",
+                    cmdName, cmdVersion);
+                co_await handler->HandleError(command,
+                    std::make_exception_ptr(std::runtime_error(errorMsg)));
+                co_return;
+            }
+
+			// Отправка подтверждения (ack) клиенту о получении команды
             auto ack = std::make_shared<XFS4IoT::Acknowledge>(
                 command->Header().RequestId().value(),
                 command->Header().Name(),
@@ -82,7 +97,7 @@ namespace XFS4IoTServer
                 std::nullopt);
             co_await connection->SendMessageAsync(ack);
 
-            // Create linked cancellation token source
+            // Создание источника остановки для отслеживания отмены
             std::stop_source stopSource;
             std::stop_token stopToken = stopSource.get_token();
 
@@ -108,7 +123,7 @@ namespace XFS4IoTServer
                 stopSource.request_stop();
             }
 
-            // Setup timeout timer if specified
+			// Установка таймера для отслеживания таймаута команды, если он указан
             std::unique_ptr<boost::asio::steady_timer> timer;
             auto timeoutMs = command->Header().Timeout();
             if (timeoutMs.has_value() && timeoutMs.value() > 0) {
@@ -127,28 +142,7 @@ namespace XFS4IoTServer
                 std::type_index(typeid(*command)),
                 connection);
 
-            // Check if command and version are supported
-            const auto& cmdName = command->Header().Name();
-            const auto& cmdVersion = command->Header().Version();
-
-            auto itSupported = m_messagesSupported.find(cmdName);
-            if (itSupported == m_messagesSupported.end()) {
-                auto errorMsg = std::format("{} Команда не поддерживается сервисом.", cmdName);
-                co_await handler->HandleError(command,
-                    std::make_exception_ptr(std::runtime_error(errorMsg)));
-                co_return;
-            }
-
-            const auto& supportedInfo = itSupported->second;
-            if (std::ranges::find(supportedInfo.Versions, cmdVersion) == supportedInfo.Versions.end()) {
-                auto errorMsg = std::format("{} Версия команды ({}) не поддерживается сервисом",
-                    cmdName, cmdVersion);
-                co_await handler->HandleError(command,
-                    std::make_exception_ptr(std::runtime_error(errorMsg)));
-                co_return;
-            }
-
-            // Process the command
+			// Если команда поддерживается и является асинхронной, выполняем её немедленно в этом контексте.
             if (isAsync) {
                 std::exception_ptr exPtr = nullptr;
                 bool hadException = false;
@@ -166,7 +160,7 @@ namespace XFS4IoTServer
 
                     exPtr = std::current_exception();
 
-                    // Check if it's a cancellation/timeout exception and repackage if needed
+					// Проверяем, не было ли это исключение из-за отмены операции (например, таймаутом)
                     try {
                         std::rethrow_exception(exPtr);
                     }
@@ -183,7 +177,7 @@ namespace XFS4IoTServer
                     hadException = true;
                 }
 
-                // Outside of the catch: suspension point is allowed here.
+				// Если было исключение, обрабатываем его через HandleError
                 if (hadException) {
                     co_await handler->HandleError(command, exPtr);
                 }
@@ -201,7 +195,7 @@ namespace XFS4IoTServer
             }
         }
         catch (const std::exception& e) {
-            // Check if it's a WebSocket exception
+			// Если исключение произошло при отправке ответа клиенту, предполагаем, что клиент отключился, и логируем это как предупреждение.
             try {
                 std::rethrow_exception(std::current_exception());
             }
@@ -210,7 +204,7 @@ namespace XFS4IoTServer
                     we.what()));
             }
             catch (const std::exception& ex) {
-                // Handle cancellation exceptions
+				// Если исключение содержит "cancel", предполагаем, что это связано с отменой операции (например, таймаутом), и готовим его для передачи в HandleError.
                 if (std::string(ex.what()).find("cancel") != std::string::npos) {
                     if (!connection || !command) {
                         throw std::invalid_argument("Недопустимый параметр в методе Dispatch");
@@ -287,7 +281,7 @@ namespace XFS4IoTServer
                     std::rethrow_exception(e);
                 }
                 catch (const std::exception& ex) {
-                    logger->error(std::format("CommandQueue failed: {}", ex.what()));
+                    logger->error(std::format("CommandQueue ошибка: {}", ex.what()));
                 }
             }
         );

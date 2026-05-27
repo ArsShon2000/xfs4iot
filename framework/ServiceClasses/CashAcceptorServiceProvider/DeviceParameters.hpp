@@ -12,7 +12,7 @@
 #include "../StorageServiceProvider/CashUnit.hpp"
 #include "../../core/CashAcceptor/PreparePresentCompletion.hpp"
 #include "../../core/CashAcceptor/Completions/CashInStartCompletion.hpp"
-#include "../../core/CashAcceptor/CashInCompletion.hpp"
+#include "../../core/CashAcceptor/Completions/CashInCompletion.hpp"
 #include "../../core/CashAcceptor/CashInEndCompletion.hpp"
 #include "../../core/CashAcceptor/CashInRollbackCompletion.hpp"
 #include "../../core/CashAcceptor/Completions/ConfigureNoteTypesCompletion.hpp"
@@ -128,7 +128,7 @@ namespace XFS4IoTFramework::CashAcceptor
         CashInResult(
             XFS4IoT::MessageHeader::CompletionCodeEnum completionCode,
             std::optional<std::string> errorDescription = std::nullopt,
-            std::optional<XFS4IoT::CashAcceptor::Completions::CashInPayloadData::ErrorCodeEnum> errorCode = std::nullopt)
+            std::optional<XFS4IoT::CashAcceptor::Completions::CashInCompletionPayloadData::ErrorCodeEnum> errorCode = std::nullopt)
             : XFS4IoTServer::DeviceResult(completionCode, errorDescription)
             , errorCode(errorCode)
             , unrecognized(0)
@@ -139,7 +139,7 @@ namespace XFS4IoTFramework::CashAcceptor
         CashInResult(
             XFS4IoT::MessageHeader::CompletionCodeEnum completionCode,
             std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass> itemCounts,
-            std::map<std::string, XFS4IoTFramework::Storage::CashUnitCountClass> movementResult,
+            std::optional < std::unordered_map<std::string, std::shared_ptr<XFS4IoTFramework::Storage::CashUnitCountClass>>> movementResult,
             int unrecognized = 0)
             : XFS4IoTServer::DeviceResult(completionCode, std::nullopt)
             , unrecognized(unrecognized)
@@ -148,10 +148,12 @@ namespace XFS4IoTFramework::CashAcceptor
         {
         }
 
-        std::optional<XFS4IoT::CashAcceptor::Completions::CashInPayloadData::ErrorCodeEnum> errorCode;
+        std::optional<XFS4IoT::CashAcceptor::Completions::CashInCompletionPayloadData::ErrorCodeEnum> errorCode;
         int unrecognized;
         std::optional<std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass>> itemCounts;
-        std::optional<std::map<std::string, XFS4IoTFramework::Storage::CashUnitCountClass>> movementResult;
+
+		// Информация о перемещении купюр по устройству, которая может быть полезна для приложения для определения, какие купюры были вставлены и в какие кассеты они были помещены. Ключом является идентификатор кассеты, а значением - объект CashUnitCountClass, содержащий информацию о количестве купюр, вставленных в эту кассету.
+        std::optional < std::unordered_map<std::string, std::shared_ptr<XFS4IoTFramework::Storage::CashUnitCountClass>>> movementResult;
     };
 
     // ============================================================================

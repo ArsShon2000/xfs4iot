@@ -1,5 +1,5 @@
 ﻿#include "GetInfoStatus.h"
-#include "../../Managers/PowerUpManager/PowerUpManager.hpp"
+#include "../../../../Devices/CashAcceptorSample/Managers/PowerUpManager/PowerUpManager.hpp"
 
 using namespace FS365::HW::Dors;
 
@@ -48,9 +48,9 @@ void GetInfoStatus::fillResult()
 		{
 			m_log->trace(std::format("{}() - WFSCIMSTATUS.fwDevice: {} -> {}", __FUNCTION__
 				, DeviceStatusToString(device)
-				, DeviceStatusToString(m_psHandler->m_bSoftwareConfigurationFault ? NODEVICE : POWEROFF)));
+				, DeviceStatusToString(m_psHandler->m_pDevice->GetSoftwareConfigurationFault() ? NODEVICE : POWEROFF)));
 		}
-		device = m_psHandler->m_bSoftwareConfigurationFault ? NODEVICE : POWEROFF;
+		device = m_psHandler->m_pDevice->GetSoftwareConfigurationFault() ? NODEVICE : POWEROFF;
 
 		if (acceptor != ACCCUUNKNOWN)
 		{

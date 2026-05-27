@@ -327,18 +327,18 @@ namespace XFS4IoTFramework::CashAcceptor
             }
         }
 
-        for (auto& [pos, presentStatus] : cashManagement_->GetLastCashManagementPresentStatus())
+		for (auto& [pos, presentStatus] : cashManagement_->GetLastCashManagementPresentStatus()) // Проверяем все позиции на наличие не возвращенных купюр, так как после начала операции все позиции должны быть пустыми
         {
-            if (presentStatus)
+            if (presentStatus) 
             {
                 presentStatus->SetTotalReturnedItems(
                     XFS4IoTFramework::Storage::StorageCashCountClass{});
             }
         }
 
-        std::optional<std::unordered_map<std::string, double>> amountLimit = std::nullopt;
+		std::optional<std::unordered_map<std::string, double>> amountLimit = std::nullopt; // По умолчанию лимит по сумме не установлен
 
-        if (payload->GetAmountLimit().has_value())
+		if (payload->GetAmountLimit().has_value()) // Если лимит по сумме установлен в запросе, то проверяем его на валидность и преобразуем в нужный формат
         {
             static const std::regex currencyRegex(R"(^[A-Z]{3}$)");
 

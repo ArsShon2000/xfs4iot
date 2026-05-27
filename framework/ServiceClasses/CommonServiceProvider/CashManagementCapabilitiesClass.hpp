@@ -298,10 +298,13 @@ namespace XFS4IoTFramework::Common
         const std::optional<bool>& GetCashBox() const noexcept { return cashBox_; }
         const std::optional<bool>& GetClassificationList() const noexcept { return classificationList_; }
         const std::optional<std::map<std::string, BanknoteItem>>& GetAllBanknoteItems() const noexcept { return allBanknoteItems_; }
+		const uint32_t GetBillTypes() const noexcept { return m_lBillTypes; }
         bool saveBanknotes()
         {
             if (allBanknoteItems_->empty() || !allBanknoteItems_)
                 return false;
+
+            SetBillTypes(); 
 
             nlohmann::json notes = nlohmann::json::object();
             for (const auto&[banknoteType, banknote] : *allBanknoteItems_)
@@ -336,7 +339,19 @@ namespace XFS4IoTFramework::Common
         std::optional<bool> cashBox_;
         std::optional<bool> classificationList_;
         std::optional<std::map<std::string, BanknoteItem>> allBanknoteItems_;
+        /// Список купюр, которые распознает купюроприемник (Битовая маска для передачи в устройство)
+        uint32_t m_lBillTypes;
 
+        void SetBillTypes() noexcept
+        {
+            for (const auto&[banknoteType, banknote] : *allBanknoteItems_)
+            {
+                if (banknote.IsEnabled())
+                {
+                    m_lBillTypes |= (1 << banknote.GetNoteId());
+                }
+			}
+		}
         std::optional<std::map<std::string, BanknoteItem>> loadPersistentNotes()
         {
             try

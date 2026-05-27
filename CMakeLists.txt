@@ -48,6 +48,13 @@ add_executable(xfs4iot_cpp_sp
 	#Devices
 	Devices/CashAcceptorSample/CashAcceptorSample.cpp
 	
+	Devices/CashAcceptorSample/Managers/EscrowManager/EscrowManager.cpp
+	Devices/CashAcceptorSample/Managers/NotesInhibitManager/NotesInhibitManager.cpp
+	Devices/CashAcceptorSample/Managers/PowerUpManager/PowerUpManager.cpp
+	
+	Devices/CashAcceptorSample/ExecuteFunctions/ExecuteCashInStart/ExecuteCashInStart.cpp
+
+
 	Devices/HW/SearchDevices/SearchDevices.cpp
 	Devices/HW/DevicePort/DevicePort.cpp
 	Devices/HW/Dors_210BA.cpp
@@ -71,10 +78,14 @@ add_executable(xfs4iot_cpp_sp
 	
 	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/ConfigureNoteTypesHandler.cpp
 	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/CashInStartHandler.cpp
+	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/CashInHandler.cpp
 
 
 	framework/ServiceClasses/CommonServiceProvider/Handlers/CapabilitiesHandler.cpp
+	framework/ServiceClasses/CommonServiceProvider/Handlers/SetVersionsHandler.cpp
 	framework/ServiceClasses/CommonServiceProvider/CommonServiceClass.cpp
+
+	
 
 	framework/ServiceClasses/CashManagementServiceProvider/CashManagementServiceClass.cpp
 	# framework/ServiceClasses/CashManagementServiceProvider/Events/RetractCommandEvents.cpp
@@ -83,10 +94,6 @@ add_executable(xfs4iot_cpp_sp
 	framework/ServiceClasses/StorageServiceProvider/StorageServiceClass.cpp
 	framework/ServiceClasses/StorageServiceProvider/Events/StorageErrorCommandEvent.cpp
 
-	
-	framework/ServiceClasses/Managers/EscrowManager/EscrowManager.cpp
-	framework/ServiceClasses/Managers/NotesInhibitManager/NotesInhibitManager.cpp
-	framework/ServiceClasses/Managers/PowerUpManager/PowerUpManager.cpp
 	
 	framework/ServiceClasses/INFO_MODULES/GetinfoBanknoteTypes/GetinfoBanknoteTypes.cpp
 	framework/ServiceClasses/INFO_MODULES/GetInfoStatus/GetInfoStatus.cpp

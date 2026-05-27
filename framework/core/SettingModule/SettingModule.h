@@ -359,7 +359,7 @@ public:
                 m_wsPort = settings["WS_PORT"].get<uint16_t>();
             }
             else {
-                m_wsPort = 8080; // значение по умолчанию
+                m_wsPort = 5846; // значение по умолчанию
                 setWSPort(m_wsPort);
             }
 
@@ -909,7 +909,7 @@ private:
     /** @brief Хост для подключения */
     std::string m_host = "http://127.0.0.1";
     /** @brief Порт для подключения */
-    uint16_t m_wsPort = 80;  /**< Порт для подключения  */
+    uint16_t m_wsPort = 5846;  /**< Порт для подключения  */
     /** @brief Использовать SSL */
     bool m_useSSL = true;  /**< Использовать SSL  */
     /** @brief Имя окна */

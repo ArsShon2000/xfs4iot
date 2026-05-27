@@ -4,7 +4,7 @@
 //#include "../../../../Devices/CashAcceptorSample/CashAcceptorSample.hpp"
 #include <format> 
 #include <string_view> 
-#include "../../INFO_MODULES/GetInfoStatus/GetInfoStatus.h"
+#include "../../../../framework/ServiceClasses/INFO_MODULES/GetInfoStatus/GetInfoStatus.h"
 
 
 using namespace FS365::HW::Dors;

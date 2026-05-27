@@ -8,6 +8,7 @@
 #include "../../server/EndpointDetails.hpp"
 #include "../../server/IDevice.hpp"
 #include "../../server/ServiceProvider.hpp"
+#include "../../core/MessageDecoder.hpp"
 #include "../../core/Logger/ILogger.hpp"
 #include "../../core/Persistent/IPersistentData.hpp"
 #include "../../core/common/XFSConstants.hpp"
@@ -287,6 +288,14 @@ namespace XFS4IoTServer
         /// </summary>
         const std::vector<std::string>& GetReplenishTargets() const override;
 
+        template<typename MessageType, typename HandlerType>
+        void RegisterCommand(
+            std::shared_ptr<XFS4IoT::MessageDecoder> decoder,
+            const std::string& name,
+            std::vector<std::string> versions,
+            XFS4IoT::XFSConstants::ServiceClass serviceClass,
+            bool isAsync);
+
     private:
         std::shared_ptr<CashAcceptorServiceClass> cashAcceptor_;
         std::shared_ptr<CashManagementServiceClass> cashManagementService_;
@@ -298,5 +307,6 @@ namespace XFS4IoTServer
         //std::shared_ptr<BanknoteNeutralizationServiceClass> ibnsService_;
         //std::shared_ptr<CheckServiceClass> checkService_;
     };
+
 
 } // namespace XFS4IoTServer

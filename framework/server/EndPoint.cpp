@@ -1,10 +1,4 @@
 ﻿#include "EndPoint.hpp"
-//#include "../core/IMessageDecoder.hpp"
-//#include "ICommandDispatcher.hpp"
-//#include "../core/Logger/ILogger.hpp"
-//#include "IConnection.hpp"
-//#include "IJsonSchemaValidator.hpp"
-//#include "ClientConnection.hpp"
 
 #include "ServicePublisher.hpp"
 #include <boost/url.hpp>
@@ -51,7 +45,7 @@ namespace XFS4IoTServer
                     "EndPoint", "logger"));
         }
 
-        // Parse URI to extract host and port
+		// Парсинг URI для получения хоста и порта
         boost::system::result<boost::urls::url_view> result =
             boost::urls::parse_uri(endpointUri_);
 
@@ -67,7 +61,7 @@ namespace XFS4IoTServer
             port_ = url.scheme() == "https" || url.scheme() == "wss" ? 443 : 80;
         }
 
-        // Create acceptor
+		// Определение адреса для привязки
         std::string bindHost = host;
         if (bindHost.empty()) {
             bindHost = "0.0.0.0";
@@ -96,10 +90,10 @@ namespace XFS4IoTServer
 
         while (!token.stop_requested()) {
             try {
-                // Accept new connection
+                // Создание сокета для нового соединения
                 tcp::socket socket(acceptor_->get_executor());
 
-                // Wait for connection with cancellation support
+				// Асинхронное принятие нового соединения
                 boost::system::error_code ec;
                 co_await acceptor_->async_accept(socket, net::redirect_error(net::use_awaitable, ec));
 
@@ -119,7 +113,7 @@ namespace XFS4IoTServer
                     socket.remote_endpoint().address().to_string(),
                     socket.remote_endpoint().port()));
 
-                // Handle connection in separate coroutine
+				// Получение исполнительного объекта для текущей сопрограммы
                 auto executor = co_await net::this_coro::executor;
                 beast::tcp_stream stream(std::move(socket));
 
@@ -137,7 +131,7 @@ namespace XFS4IoTServer
             }
         }
 
-        // Close acceptor
+		// Закрытие акцептора при остановке сервера
         if (acceptor_->is_open()) {
             boost::system::error_code ec;
             acceptor_->close(ec);
@@ -155,9 +149,9 @@ namespace XFS4IoTServer
         beast::tcp_stream stream,
         std::stop_token token)
     {
+        std::shared_ptr<ServiceProvider> selectedServiceProvider = nullptr;
         try {
-            selectedServiceProvider = nullptr;
-            // Read HTTP request
+			// Буфер для чтения HTTP-запроса и объект запроса
             beast::flat_buffer buffer;
             http::request<http::string_body> req;
 
@@ -170,13 +164,13 @@ namespace XFS4IoTServer
             std::string target = std::string(req.target());
             logger_->trace(std::format("Получен запрос на обновление соединения для пути={}", target));
 
-            // Check if it's a WebSocket upgrade request
+			// Проверка, является ли запрос запросом на обновление до WebSocket
             if (websocket::is_upgrade(req)) {
-                // Create WebSocket from stream
+				// Создание WebSocket-соединения поверх TCP-соединения
                 auto ws = std::make_shared<websocket::stream<beast::tcp_stream>>(
                     std::move(stream));
 
-                // Accept the WebSocket handshake
+				// Асинхронное принятие WebSocket-соединения
                 co_await ws->async_accept(req, net::use_awaitable);
                 logger_->trace(std::format(
                     "{}() - WebSocket-соединение установлено для пути {}",
@@ -245,7 +239,7 @@ namespace XFS4IoTServer
                     }
                 }
 
-                // Create client connection
+				// Создание объекта ClientConnection для управления этим соединением
                 auto clientConnection = std::make_shared<ClientConnection>(
                     ws,
                     decoder,
@@ -259,7 +253,7 @@ namespace XFS4IoTServer
                     selectedServiceProvider->AddConnection(clientConnection);
                 }
 
-                // Add to connection list
+				// Добавление соединения в список активных соединений
                 {
                     std::lock_guard<std::mutex> lock(connectionsMutex_);
                     connectionDetails_.push_back(ConnectionDetails{
@@ -276,10 +270,10 @@ namespace XFS4IoTServer
                         });
                 }*/
 
-                // Run the client connection
+				// Запуск обработки сообщений для этого соединения
                 co_await clientConnection->RunAsync(token);
 
-                // Remove from connection list when done
+				// После завершения обработки сообщений, удаляем соединение из списка активных соединений
                 {
                     std::lock_guard<std::mutex> lock(connectionsMutex_);
                     connectionDetails_.erase(
@@ -301,7 +295,7 @@ namespace XFS4IoTServer
                         __FUNCTION__, connectionDetails_.size()));
             }
             else {
-                // Return 400 Bad Request for non-WebSocket requests
+				// Если это не запрос на обновление до WebSocket, отправляем ответ с ошибкой 400 Bad Request
                 http::response<http::string_body> res{ http::status::bad_request, req.version() };
                 res.set(http::field::server, "XFS4IoT Server");
                 res.set(http::field::content_type, "text/plain");
@@ -358,250 +352,3 @@ namespace XFS4IoTServer
         return connections;
     }
 }
-
-
-//
-//
-//#include "EndPoint.hpp"
-////#include "../core/IMessageDecoder.hpp"
-////#include "ICommandDispatcher.hpp"
-////#include "../core/Logger/ILogger.hpp"
-////#include "IConnection.hpp"
-////#include "IJsonSchemaValidator.hpp"
-////#include "ClientConnection.hpp"
-//
-//#include "ServicePublisher.hpp"
-//#include <boost/url.hpp>
-//
-//namespace beast = boost::beast;
-//namespace http = beast::http;
-//namespace websocket = beast::websocket;
-//namespace net = boost::asio;
-//using tcp = boost::asio::ip::tcp;
-//
-//namespace XFS4IoTServer
-//{
-//    EndPoint::EndPoint(boost::asio::io_context& ioContext,
-//        const std::string& endpointUri,
-//        std::shared_ptr<XFS4IoT::IMessageDecoder> commandDecoder,
-//        std::shared_ptr<ICommandDispatcher> commandDispatcher,
-//        std::shared_ptr<ILogger> logger,
-//        std::weak_ptr<ServicePublisher> publisher)
-//        : ioContext_(ioContext)
-//        , commandDecoder_(std::move(commandDecoder))
-//        , commandDispatcher_(std::move(commandDispatcher))
-//        , logger_(std::move(logger))
-//        , endpointUri_(endpointUri)
-//        , publisher_(publisher)
-//    {
-//        if (endpointUri_.empty()) {
-//            throw std::invalid_argument(
-//                std::format("В конструкторе {} получен недопустимый параметр. {}",
-//                    "EndPoint", "endpointUri"));
-//        }
-//        if (!commandDecoder_) {
-//            throw std::invalid_argument(
-//                std::format("В конструкторе {} получен недопустимый параметр. {}",
-//                    "EndPoint", "commandDecoder"));
-//        }
-//        if (!commandDispatcher_) {
-//            throw std::invalid_argument(
-//                std::format("В конструкторе {} получен недопустимый параметр. {}",
-//                    "EndPoint", "commandDispatcher"));
-//        }
-//        if (!logger_) {
-//            throw std::invalid_argument(
-//                std::format("В конструкторе {} получен недопустимый параметр. {}",
-//                    "EndPoint", "logger"));
-//        }
-//
-//        // Parse URI to extract host and port
-//        boost::system::result<boost::urls::url_view> result =
-//            boost::urls::parse_uri(endpointUri_);
-//
-//        if (!result) {
-//            throw std::invalid_argument("Invalid endpoint URI");
-//        }
-//
-//        auto url = result.value();
-//        std::string host = std::string(url.host());
-//        port_ = url.port_number();
-//
-//        if (port_ == 0) {
-//            port_ = url.scheme() == "https" || url.scheme() == "wss" ? 443 : 80;
-//        }
-//
-//        // Create acceptor
-//        std::string bindHost = host;
-//        if (bindHost.empty()) {
-//            bindHost = "0.0.0.0";
-//        }
-//        else if (bindHost == "localhost") {
-//            bindHost = "127.0.0.1";
-//        }
-//
-//        tcp::endpoint endpoint(net::ip::make_address(bindHost), port_);
-//        acceptor_ = std::make_unique<tcp::acceptor>(ioContext_, endpoint);
-//
-//        logger_->trace(std::format("{}() - Server: New endpoint at {}", __FUNCTION__, endpointUri_));
-//    }
-//
-//    EndPoint::~EndPoint()
-//    {
-//        if (acceptor_ && acceptor_->is_open()) {
-//            boost::system::error_code ec;
-//            acceptor_->close(ec);
-//        }
-//        ioContext_.stop();
-//    }
-//
-//    boost::asio::awaitable<void> EndPoint::RunAsync(std::stop_token token)
-//    {
-//        logger_->trace(std::format("{}() - Server: {} listening for new connections", __FUNCTION__, endpointUri_));
-//
-//        while (!token.stop_requested()) {
-//            try {
-//                // Accept new connection
-//                tcp::socket socket(acceptor_->get_executor());
-//
-//                // Wait for connection with cancellation support
-//                boost::system::error_code ec;
-//                co_await acceptor_->async_accept(socket, net::redirect_error(net::use_awaitable, ec));
-//
-//                if (ec) {
-//                    if (ec == net::error::operation_aborted && token.stop_requested()) {
-//                        break;
-//                    }
-//                    logger_->error(std::format("{}() - Server: Accept error: {}", __FUNCTION__, ec.message()));
-//                    continue;
-//                }
-//
-//                logger_->trace(std::format("{}() - Server: {} accepted new connection, total connections: {}",
-//                    __FUNCTION__, endpointUri_, connectionDetails_.size() + 1));
-//
-//                // Handle connection in separate coroutine
-//                auto executor = co_await net::this_coro::executor;
-//                beast::tcp_stream stream(std::move(socket));
-//
-//                co_spawn(executor,
-//                    HandleConnection(std::move(stream), token),
-//                    net::detached);
-//
-//            }
-//            catch (const std::exception& ex) {
-//                logger_->error(std::format("{}() - Server: Error in RunAsync: {}", __FUNCTION__, ex.what()));
-//
-//                if (token.stop_requested()) {
-//                    break;
-//                }
-//            }
-//        }
-//
-//        // Close acceptor
-//        if (acceptor_->is_open()) {
-//            boost::system::error_code ec;
-//            acceptor_->close(ec);
-//        }
-//
-//        logger_->trace(std::format("{}() - Server: EndPoint stopped", __FUNCTION__));
-//    }
-//
-//    boost::asio::awaitable<void> EndPoint::AcceptConnections(std::stop_token token)
-//    {
-//        return boost::asio::awaitable<void>();
-//    }
-//
-//    boost::asio::awaitable<void> EndPoint::HandleConnection(
-//        beast::tcp_stream stream,
-//        std::stop_token token)
-//    {
-//        try {
-//            // Read HTTP request
-//            beast::flat_buffer buffer;
-//            http::request<http::string_body> req;
-//
-//            co_await http::async_read(stream, buffer, req, net::use_awaitable);
-//
-//            // Check if it's a WebSocket upgrade request
-//            if (websocket::is_upgrade(req)) {
-//                // Create WebSocket from stream
-//                auto ws = std::make_shared<websocket::stream<beast::tcp_stream>>(
-//                    std::move(stream));
-//
-//                // Accept the WebSocket handshake
-//                co_await ws->async_accept(req, net::use_awaitable);
-//
-//                // Create client connection
-//                auto clientConnection = std::make_shared<ClientConnection>(
-//                    ws,
-//                    commandDecoder_,
-//                    commandDispatcher_,
-//                    logger_,
-//                    jsonSchemaValidator_
-//                );
-//
-//                // Add to connection list
-//                {
-//                    std::lock_guard<std::mutex> lock(connectionsMutex_);
-//                    connectionDetails_.push_back(ConnectionDetails{
-//                        .timer = nullptr,
-//                        .connection = clientConnection
-//                        });
-//                }
-//
-//                // Run the client connection
-//                co_await clientConnection->RunAsync(token);
-//
-//                // Remove from connection list when done
-//                {
-//                    std::lock_guard<std::mutex> lock(connectionsMutex_);
-//                    connectionDetails_.erase(
-//                        std::remove_if(connectionDetails_.begin(),
-//                            connectionDetails_.end(),
-//                            [&clientConnection](const ConnectionDetails& cd) {
-//                                return cd.connection == clientConnection;
-//                            }),
-//                        connectionDetails_.end()
-//                    );
-//                }
-//
-//                logger_->trace(std::format("{}() - Server: Connection closed, remaining: {}",
-//                    __FUNCTION__, connectionDetails_.size()));
-//            }
-//            else {
-//                // Return 400 Bad Request for non-WebSocket requests
-//                http::response<http::string_body> res{ http::status::bad_request, req.version() };
-//                res.set(http::field::server, "XFS4IoT Server");
-//                res.set(http::field::content_type, "text/plain");
-//                res.body() = "WebSocket connection required";
-//                res.prepare_payload();
-//
-//                co_await http::async_write(stream, res, net::use_awaitable);
-//
-//                boost::system::error_code ec;
-//                stream.socket().shutdown(tcp::socket::shutdown_send, ec);
-//            }
-//        }
-//        catch (const std::exception& ex) {
-//            logger_->error(std::format("{}() - Server: Error handling connection: {}", __FUNCTION__, ex.what()));
-//        }
-//    }
-//
-//    void EndPoint::SetJsonSchemaValidator(std::shared_ptr<IJsonSchemaValidator> validator)
-//    {
-//        jsonSchemaValidator_ = std::move(validator);
-//    }
-//
-//    std::vector<std::shared_ptr<IConnection>> EndPoint::GetConnections() const
-//    {
-//        std::lock_guard<std::mutex> lock(connectionsMutex_);
-//        std::vector<std::shared_ptr<IConnection>> connections;
-//        connections.reserve(connectionDetails_.size());
-//
-//        for (const auto& detail : connectionDetails_) {
-//            connections.push_back(detail.connection);
-//        }
-//
-//        return connections;
-//    }
-//}

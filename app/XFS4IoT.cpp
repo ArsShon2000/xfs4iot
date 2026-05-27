@@ -60,7 +60,7 @@ int main()
 
 		FS365::HW::Dors::CIdentification m_idn;
 		
-		std::map<std::string, XFS4IoTFramework::Common::CashManagementCapabilitiesClass::BanknoteItem> allBanknoteIDs;
+		std::map<std::string, XFS4IoTFramework::Common::CashManagementCapabilitiesClass::BanknoteItem> allBanknoteIDs;	// чписок поддерживаемых банкнот из устройства
 		
 		/// Таблица номиналов (результат GetBillTable())
 		std::span<uint8_t, 120> m_Bills{ new uint8_t[120]{}, 120 };
@@ -122,18 +122,33 @@ int main()
 				device->println("Пропускаем монеты: ", skippedNoteTypes);
 			}
 		}
-		// Создание CashAcceptor (PSHandler)
-		auto cimCashAcceptorDevice = std::make_shared<XFS4IoTSP::CashAcceptor::Sample::CashAcceptorSample>(
-			std::move(device),
-			m_idn, 
-			logger, 
-			allBanknoteIDs);
-		cimCashAcceptorDevice->Initialize();
-
-		// Создание persistent data once and reuse
+		
+		// Создание persistent data (оставил старую версию. как будет время нужно убрать этого со всех файлов)
 		auto persistentData = std::make_shared<FilePersistentData>(logger);
 
-		// Create CashAcceptor service
+		// Для инициализации CashInStatus используем данные из PersistentDatasHandler, чтобы восстановить статус после перезапуска
+		auto status = static_cast<XFS4IoTFramework::CashManagement::CashInStatusClass::StatusEnum>(
+			PersistentDatasHandler::GetInstance()->getCashInTransactionStatus(true));
+		auto refusedItems = PersistentDatasHandler::GetInstance()->getCashInNumOfRefused(true);
+		auto unrecognized = PersistentDatasHandler::GetInstance()->getCashInUnrecognized(true);
+		auto cashCounts = std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>();
+		auto cashCountsJson = PersistentDatasHandler::GetInstance()->getCashInCashItemCount();
+		XFS4IoTFramework::Storage::from_json(cashCountsJson, *cashCounts);
+
+		std::shared_ptr<XFS4IoTFramework::CashManagement::CashInStatusClass> cashInStatus = std::make_shared<XFS4IoTFramework::CashManagement::CashInStatusClass>();
+
+
+		// Создание CashAcceptor (PSHandler)
+		auto cimCashAcceptorDevice = std::make_shared<XFS4IoTSP::CashAcceptor::Sample::CashAcceptorSample>(
+			std::move(device)
+			, m_idn
+			, logger
+			, allBanknoteIDs
+			, cashInStatus
+		);
+
+
+		// Создание сервиса CashAcceptor и его инициализация
 		auto cashAcceptorService = std::make_shared<XFS4IoTServer::CashAcceptorServiceProvider>(
 			*endpointDetails,
 			"CimCashAcceptor", // Service name
@@ -153,23 +168,48 @@ int main()
 			"MAIN после инициализации cashAcceptorService ptr = {}",
 			static_cast<const void*>(cashAcceptorService.get())));
 
-		// Link device to service
+		// связываем устройство с сервисом
 		cimCashAcceptorDevice->SetServiceProvider(cashAcceptorService);
+		// Инициализируем устройство (безопасно — объект уже в shared_ptr)
+		cimCashAcceptorDevice->Initialize();
 
-		// Add service to publisher
+		auto cancellationSource = std::make_shared<XFS4IoTServer::CancellationSource>();
+
+
+		// Запускаем асинхронную работу устройства
+		// Важно: запускать RunAsync до добавления сервиса в publisher, чтобы избежать гонки при старте
+		// Если запустить RunAsync после добавления в publisher, то может возникнуть ситуация, когда publisher начнет обрабатывать запросы и вызывать методы сервиса до того, как устройство будет готово к работе, что приведет к ошибкам.
+		// Запуская RunAsync до добавления в publisher, мы гарантируем, что устройство будет полностью инициализировано и готово к работе до того, как сервис начнет обрабатывать запросы от клиентов.
+		boost::asio::co_spawn(
+			cashAcceptorService->getIoContext(),
+			cimCashAcceptorDevice->RunAsync(cancellationSource->GetToken()),
+			[logger](std::exception_ptr e)
+			{
+				if (!e) return;
+
+				try {
+					std::rethrow_exception(e);
+				}
+				catch (const std::exception& ex) {
+					logger->error(std::format(
+						"CashAcceptorSample::RunAsync failed: {}",
+						ex.what()));
+				}
+			}
+		);
+
+		// Добавляем сервис в publisher
 		publisher->Add(cashAcceptorService);
 
 		logger->trace(std::format(
 			"MAIN после добавления cashAcceptorService ptr = {}",
 			static_cast<const void*>(cashAcceptorService.get())));
 
-		// Create cancellation source
-		auto cancelToken = std::make_shared<XFS4IoTServer::CancellationSource>();
 
 		// Run publisher
 		boost::asio::co_spawn(
 			ioContext,
-			publisher->RunAsync(cancelToken),
+			publisher->RunAsync(cancellationSource),
 			[&logger](std::exception_ptr e) {
 				if (e) {
 					try {
@@ -182,14 +222,14 @@ int main()
 			}
 		);
 
-		// Handle Ctrl+C for graceful shutdown
+		// Завершаем работу при получении сигнала (Ctrl+C)
 		boost::asio::signal_set signals(ioContext, SIGINT, SIGTERM);
-		signals.async_wait([&cancelToken, &logger](const boost::system::error_code&, int) {
+		signals.async_wait([&cancellationSource, &logger](const boost::system::error_code&, int) {
 			logger->trace("Main: Получен сигнал завершения работы.");
-			cancelToken->Cancel();
+			cancellationSource->Cancel();
 			});
 
-		// Run IO context
+		//
 		ioContext.run();
 
 		logger->trace("Main: Отключение сервера завершено");

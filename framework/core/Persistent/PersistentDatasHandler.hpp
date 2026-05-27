@@ -193,7 +193,7 @@ public:
                 if (!isFileExists)
                 {
                     nlohmann::json initialContent = {
-                        {"signature", encryptionKey},
+ //{"signature", encryptionKey},
                         {"FRAUD_ATTEMPTS_COUNT", 0}
                     };
                     pinstance_->create(initialContent); 
@@ -246,6 +246,46 @@ public:
     bool setConfiguredNotes(const nlohmann::json& notes);
     nlohmann::json getConfiguredNotes(bool reloadFromFile = false);
 
+
+
+    // ============================================================================
+    // CashInStatus
+    // ============================================================================
+    static constexpr const char* CASH_IN_STATUS_PATH = "CashInStatus";
+    static constexpr const char* CASH_IN_STATUS_STATUS_PATH = "CashInStatus.Status";
+    static constexpr const char* CASH_IN_STATUS_REFUSED_PATH = "CashInStatus.NumOfRefused";
+    static constexpr const char* CASH_IN_STATUS_ACCEPTED_ITEMS_PATH = "CashInStatus.AcceptedItems";
+    static constexpr const char* CASH_IN_STATUS_UNFIT_ITEMS_PATH = "CashInStatus.UnfitItems";
+    static constexpr const char* CASH_IN_STATUS_DISPUTED_ITEMS_PATH = "CashInStatus.DisputedItems";
+    static constexpr const char* CASH_IN_STATUS_UNRECOGNIZED_PATH = "CashInStatus.Unrecognized";
+    static constexpr const char* CASH_IN_STATUS_CASH_ITEM_COUNT_PATH = "CashInStatus.CashItemCount";
+
+    bool setCashInStatus(const nlohmann::json& cashInStatus);
+    nlohmann::json getCashInStatus(bool reloadFromFile = false);
+
+    bool setCashInCashItemCount(const nlohmann::json& count);
+    nlohmann::json getCashInCashItemCount(bool reloadFromFile = false);
+
+    bool setCashInTransactionStatus(int status);
+    int getCashInTransactionStatus(bool reloadFromFile = false);
+
+    bool setCashInNumOfRefused(uint16_t count);
+    uint16_t getCashInNumOfRefused(bool reloadFromFile = false);
+
+    bool setCashInUnrecognized(uint16_t count);
+    uint16_t getCashInUnrecognized(bool reloadFromFile = false);
+
+    bool setCashInAcceptedItems(const nlohmann::json& acceptedItems);
+    nlohmann::json getCashInAcceptedItems(bool reloadFromFile = false);
+
+    bool resetCashInStatus();
+
+
+    // ============================================================================
+
+    // ============================================================================
+
+    //bool 
 
      /** @return  шаблонный сеттер */
     template<typename ValueT, typename LocalT>
@@ -314,6 +354,16 @@ private:
 
     nlohmann::json normalizeConfiguredNotes(
         const nlohmann::json& notes);
+
+
+    // ============================================================================
+    // CashInStatus
+    // ============================================================================
+    nlohmann::json cashInStatus_;
+
+    // ============================================================================
+        
+    // ============================================================================
 
     // Логгер для записи ошибок и отладки
     std::shared_ptr<ILogger> m_log;

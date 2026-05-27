@@ -7,10 +7,10 @@
 #include <thread>
 #include <string>
 #include <boost/scope_exit.hpp>
-#include "../../../core/common/StateMachine/StateMachine.hpp"
-#include "../../../core/SettingModule/SettingModule.h"
-#include "../../../../Devices/CashAcceptorSample/CashAcceptorSample.hpp"
-#include "../../../core/Logger/ILogger.hpp"
+#include "../../../../framework/core/common/StateMachine/StateMachine.hpp"
+#include "../../../../framework/core/SettingModule/SettingModule.h"
+#include "../../CashAcceptorSample.hpp"
+#include "../../../../framework/core/Logger/ILogger.hpp"
 
 /**
  * @file PowerUpManager.hpp

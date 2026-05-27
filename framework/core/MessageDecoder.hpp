@@ -1,72 +1,4 @@
-﻿//#include <nlohmann/json.hpp>
-//#include <map>
-//#include <typeindex>
-//#include "IMessageDecoder.hpp"
-//
-//namespace XFS4IoT
-//{
-//    /// <summary>
-//    /// Example implementation of IMessageDecoder
-//    /// </summary>
-//    class MessageDecoder : public IMessageDecoder
-//    {
-//    public:
-//        MessageDecoder() = default;
-//
-//        /// <summary>
-//        /// Register a message type with its factory function
-//        /// </summary>
-//        template<typename MessageType>
-//        void RegisterMessageType(const std::string& typeName)
-//        {
-//            factories_[typeName] = [](const nlohmann::json& j) -> std::shared_ptr<MessageBase> {
-//                // This would use your actual deserialization logic
-//                // For example: return std::make_shared<MessageType>(j);
-//                return nullptr; // Placeholder
-//                };
-//            supportedTypes_.push_back(typeName);
-//        }
-//
-//        std::shared_ptr<MessageBase> TryUnserialise(const std::string& json) const override
-//        {
-//            try {
-//                auto j = nlohmann::json::parse(json);
-//
-//                // Extract message type from header
-//                if (!j.contains("header") || !j["header"].contains("name")) {
-//                    return nullptr;
-//                }
-//
-//                std::string messageType = j["header"]["name"].get<std::string>();
-//
-//                auto it = factories_.find(messageType);
-//                if (it == factories_.end()) {
-//                    return nullptr;
-//                }
-//
-//                return it->second(j);
-//            }
-//            catch (const std::exception&) {
-//                return nullptr;
-//            }
-//        }
-//
-//        std::vector<std::string> GetSupportedMessageTypes() const override
-//        {
-//            return supportedTypes_;
-//        }
-//
-//    private:
-//        using Factory = std::function<std::shared_ptr<MessageBase>(const nlohmann::json&)>;
-//        std::map<std::string, Factory> factories_;
-//        std::vector<std::string> supportedTypes_;
-//    };
-//}
-
-
-////////////////////////////////////////////////
-
-#pragma once
+﻿#pragma once
 
 #include <nlohmann/json.hpp>
 #include <map>
@@ -77,7 +9,7 @@
 
 #include "IMessageDecoder.hpp"
 #include <iostream>
-#include "../framework/core/Logger/ILogger.hpp"
+#include "./Logger/ILogger.hpp"
 
 namespace XFS4IoT
 {
@@ -90,12 +22,16 @@ namespace XFS4IoT
         }
 
         template<typename MessageType>
-        void RegisterMessageType(const std::string& typeName)
+        void RegisterMessageType(const std::string& typeName,
+            const std::vector<std::string>& versions)
         {
-            factories_[typeName] = [](const nlohmann::json& j) -> std::shared_ptr<MessageBase>
-                {
-                    return MessageType::FromJson(j);
-                };
+            for (const auto& version : versions) {
+                factories_[{ typeName, version }] =
+                    [](const nlohmann::json& j) -> std::shared_ptr<MessageBase>
+                    {
+                        return MessageType::FromJson(j);
+                    };
+            }
 
             if (std::find(supportedTypes_.begin(), supportedTypes_.end(), typeName) == supportedTypes_.end()) {
                 supportedTypes_.push_back(typeName);
@@ -119,6 +55,7 @@ namespace XFS4IoT
                     std::format("{}() - Команда имеет header", __FUNCTION__), 500);
 
                 std::string messageType = j["header"]["name"].get<std::string>();
+                std::string version = j["header"]["version"].get<std::string>();
 
                 logger_->trace(
                     std::format("{}() - messageType = {}", __FUNCTION__, messageType), 500);
@@ -126,8 +63,9 @@ namespace XFS4IoT
                 logger_->trace(
                     std::format("{}() - Количество регистрированных комманд = {}", __FUNCTION__, factories_.size()), 500);
 
-                auto it = factories_.find(messageType);
+                auto it = factories_.find({ messageType, version });
                 if (it == factories_.end()) {
+                    logger_->warn(std::format("Команда или данная версия команды не поддерживается!"));
                     return nullptr;
                 }
 
@@ -149,8 +87,10 @@ namespace XFS4IoT
 
     private:
 		// Factory это функция, которая принимает JSON и возвращает указатель на MessageBase (то есть регистрированные команды)
-        using Factory = std::function<std::shared_ptr<MessageBase>(const nlohmann::json&)>;
-        std::map<std::string, Factory> factories_;
+        using Factory = std::function<std::shared_ptr<MessageBase>(const nlohmann::json&)>; 
+
+        using MessageKey = std::pair<std::string, std::string>;
+        std::map<MessageKey, Factory> factories_;
         std::vector<std::string> supportedTypes_; 
         std::shared_ptr<ILogger> logger_;
     };

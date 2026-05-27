@@ -32,11 +32,14 @@
 #include "../../framework/core/common/StateMachine/StateMachine.hpp"
 //#include "CashUnitStorageConfiguration.hpp"
 //#include "CashStatusClass.hpp"
+// Forward declaration
 
-    class PowerUpManager;
+    class PowerUpManager; 
+    class ExecuteCashInStart; 
 
 namespace XFS4IoTSP::CashAcceptor::Sample
 {
+    class EscrowManager;
 
     using StateMachine = XfsCommon::StateMachine< FS365::HW::Dors::DorsHW::POLL_RES >;
 
@@ -60,6 +63,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         public XFS4IoTFramework::Storage::IStorageDevice,
         public std::enable_shared_from_this<CashAcceptorSample>
     {
+        friend class ExecuteCashInStart;
 
 
     public:
@@ -70,7 +74,9 @@ namespace XFS4IoTSP::CashAcceptor::Sample
             std::unique_ptr<FS365::HW::Dors::DorsHW> device
             , FS365::HW::Dors::CIdentification& idn
             , std::shared_ptr<ILogger> logger
-            , std::map<std::string, XFS4IoTFramework::Common::CashManagementCapabilitiesClass::BanknoteItem> &allBanknoteIDs
+            , std::map<std::string
+            , XFS4IoTFramework::Common::CashManagementCapabilitiesClass::BanknoteItem> &allBanknoteIDs
+            , std::shared_ptr<XFS4IoTFramework::CashManagement::CashInStatusClass> cashInStatus
         );
 
         /// <summary>
@@ -146,7 +152,11 @@ namespace XFS4IoTSP::CashAcceptor::Sample
             std::stop_token cancellation) override;
 
         /// <summary>
-        /// This command counts the items in the storage unit(s).
+		/// Эта команда используется для получения информации о количестве купюр в хранилищах устройства. 
+        /// Команда может выполняться как во время, так и вне операции приема наличных. 
+        /// Если устройство поддерживает эту команду во время операции приема наличных, 
+        /// она может быть использована для получения обновлений о количестве 
+        /// купюр в хранилищах после каждой принятой купюры.
         /// </summary>
         boost::asio::awaitable<XFS4IoTFramework::CashAcceptor::CashUnitCountResult> CashUnitCount(
             std::shared_ptr<XFS4IoTFramework::CashAcceptor::CashUnitCountCommandEvents> events,
@@ -207,6 +217,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         std::shared_ptr<XFS4IoTFramework::CashManagement::CashInStatusClass> GetCashInStatus() const override { return cashInStatus_; }
         void SetCashInStatus(std::shared_ptr<XFS4IoTFramework::CashManagement::CashInStatusClass> status) override { cashInStatus_ = status; }
 
+		std::shared_ptr<std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass>> GetAcceptedItems() const { return acceptedItems_; }
         /// <summary>
         /// The physical lock/unlock status of the CashAcceptor device and storages
         /// </summary>
@@ -301,31 +312,38 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         // ============================================================================
 
         /// <summary>
-        /// Return storage information for current configuration and capabilities on the startup.
+		/// Возаращает конфигурацию кассет. Эти данные не должны изменяться в процессе работы устройства, 
+        /// в отличие от данных, возвращаемых GetCashUnitStatus, которые должны отражать текущее состояние кассет.
         /// </summary>
         bool GetCashStorageConfiguration(
             std::map<std::string, XFS4IoTFramework::Storage::CashUnitStorageConfiguration>& newCashUnits) override;
 
         /// <summary>
-        /// Return cash unit counts maintained by the device
+		/// Возвращает текущие количества в кассетах. Эти данные должны отражать текущее количество в кассетах, 
+        /// которое может изменяться в процессе работы устройства, в отличие от данных, 
+        /// возвращаемых GetCashUnitInitialCounts, которые должны оставаться неизменными в процессе работы устройства 
+        /// и отражать количество в кассетах при загрузке устройства.
         /// </summary>
         bool GetCashUnitCounts(
             std::map<std::string, XFS4IoTFramework::Storage::CashUnitCountClass>& unitCounts) override;
 
         /// <summary>
-        /// Return cash unit initial counts maintained by the device class
+		/// Возвращает начальные количества в кассетах, которые были при загрузке устройства. Эти данные не должны изменяться в процессе работы устройства, в отличие от данных, возвращаемых GetCashUnitCounts, которые должны отражать текущее количество в кассетах.
         /// </summary>
         bool GetCashUnitInitialCounts(
             std::map<std::string, XFS4IoTFramework::Storage::StorageCashCountClass>& initialCounts) override;
 
         /// <summary>
-        /// Return cash storage status
+		/// Возвращает статус хранилища, который должен отражать текущее состояние хранилища,
         /// </summary>
         bool GetCashStorageStatus(
             std::map<std::string, XFS4IoTFramework::Storage::CashUnitStorage::StatusEnum>& storageStatus) override;
 
         /// <summary>
-        /// Return cash unit status maintained by the device class
+		/// Возвращает статус кассет, который должен отражать текущее состояние кассет, 
+        /// которое может изменяться в процессе работы устройства, в отличие от данных, 
+        /// возвращаемых GetCashStorageConfiguration, которые должны оставаться неизменными 
+        /// в процессе работы устройства и отражать конфигурацию кассет при загрузке устройства.
         /// </summary>
         bool GetCashUnitStatus(
             std::map<std::string, XFS4IoTFramework::Storage::CashStatusClass::ReplenishmentStatusEnum>& unitStatus) override;
@@ -409,6 +427,17 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         //    std::stop_token cancellation) override;
 
         // ============================================================================
+        // Доступность Cash In
+        // ============================================================================
+        bool IsReadyForCashIn();
+
+        // ============================================================================
+        // Cassete
+        // ============================================================================
+
+        bool IsCassetteMissing() { return m_bCassetteMissing; }
+
+        // ============================================================================
         // Common Interface
         // ============================================================================
 
@@ -445,6 +474,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         std::shared_ptr<XFS4IoTServer::IServiceProvider> GetServiceProvider() const override;
         void SetServiceProvider(std::shared_ptr<XFS4IoTServer::IServiceProvider> serviceProvider) override;
 
+		std::shared_ptr<XFS4IoTFramework::Common::CashAcceptorServiceProvider> GetCashAcceptorServiceProvider() const { return cashAcceptorService_; }
+
         void loggingChangeStatus(FS365::HW::Dors::DorsHW::POLL_RES currentState);
 
         /// Указатель на устройство
@@ -463,8 +494,6 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         bool m_bResetOperationInProgress;
         /// Флаг режима приёма наличных
         bool bConjointCashInIsActive{ false };
-        /// Флаг некорректной конфигурации ПО
-        bool m_bSoftwareConfigurationFault;
         /// Флаг замены кассеты
         bool m_bCassetteHasBeenReplaced;
         /// Попытки восстановить порт
@@ -482,6 +511,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         std::unique_ptr<PowerUpManager> powerUpManager_;
 
+        std::unique_ptr<XFS4IoTSP::CashAcceptor::Sample::EscrowManager> escrowManager_;
+
     protected:
         /// Поток опроса устройства
         std::unique_ptr<std::jthread> m_pollingThread;
@@ -492,6 +523,11 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
 
     private:
+        // ============================================================================
+        // Cassete
+        // ============================================================================
+
+		bool m_bCassetteMissing = false; // Флаг, указывающий на отсутствие кассеты
 
         // ============================================================================
         // Купюры
@@ -529,6 +565,9 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 			XFS4IoTFramework::Storage::CashStatusClass::AccuracyEnum accuracy_; // Точность счетчика банкнот (например, Exact, Estimated, NotSupported)
         };
 
+		/// Метод для создания конфигурации кассеты для ответа на запрос статуса и конфигурации
+        XFS4IoTFramework::Storage::CashUnitStorageConfiguration MakeCashInCassetteConfig() const;
+
         // Указатели на сервисы
         std::shared_ptr<XFS4IoTServer::IServiceProvider> setServiceProvider_;
         std::shared_ptr<XFS4IoTFramework::Common::CashAcceptorServiceProvider> cashAcceptorService_;
@@ -552,7 +591,10 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         std::map<std::string, CashStorageInfo> cashUnitInfo_;
 
         // банкноты текущей cash-in transaction
-        std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass> acceptedItems_;
+		std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass> currentCashInItems_;
+
+
+        std::shared_ptr<std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass>> acceptedItems_;
 
 		// все поддерживаемые банком номиналы банкнот
         const std::map<std::string, XFS4IoTFramework::Common::CashManagementCapabilitiesClass::BanknoteItem> allBanknoteIDs_;
@@ -563,7 +605,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         // Mutable banknote configuration (копия для изменения)
         std::map<std::string, XFS4IoTFramework::Common::CashManagementCapabilitiesClass::BanknoteItem> configurableBanknoteIDs_; // m_lBillTypes из XFS 3.x
-
+        
         std::weak_ptr<StateMachine::BlockedWaitTermination> m_p_async_reset_terminator; /**< Токен отмены ожидания */
         
     };

@@ -32,7 +32,7 @@ namespace XFS4IoTServer
                         "EndpointDetails"));
             }
 
-            // Check if connection is secure (not starting with "http://")
+			// Определяем, является ли соединение безопасным, проверяя, начинается ли URI с "http://"
             std::string lowerUri = ToLower(serverAddressUri_);
             secureConnection_ = !lowerUri.starts_with("http://");
         }

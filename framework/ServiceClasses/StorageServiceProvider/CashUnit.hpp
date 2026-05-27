@@ -388,12 +388,107 @@ namespace XFS4IoTFramework::Storage
         std::map<std::string, CashItemCountClass> itemCounts_;
     };
 
+    inline void to_json(nlohmann::json& j, const CashItemCountClass& p)
+    {
+        j = nlohmann::json::object();
 
+        j["fit"] = p.GetFit();
+        j["unfit"] = p.GetUnfit();
+        j["suspect"] = p.GetSuspect();
+        j["counterfeit"] = p.GetCounterfeit();
+        j["inked"] = p.GetInked();
+    }
+
+    inline void to_json(nlohmann::json& j, const StorageCashCountClass& p)
+    {
+        j = nlohmann::json::object();
+
+        j["unrecognized"] = p.GetUnrecognized();
+
+        if (!p.GetItemCounts().empty())
+        {
+            nlohmann::json itemCounts = nlohmann::json::object();
+
+            for (const auto& [key, value] : p.GetItemCounts())
+            {
+                itemCounts[key] = value;
+            }
+
+            j["itemCounts"] = std::move(itemCounts);
+        }
+    }
+
+    inline std::string toString(const CashItemCountClass& p)
+    {
+        nlohmann::json j = p;
+        return j.dump();
+    }
+
+    inline std::string toString(const StorageCashCountClass& p)
+    {
+        nlohmann::json j = p;
+        return j.dump();
+    }
+
+    inline void from_json(const nlohmann::json& j, CashItemCountClass& p)
+    {
+        if (j.contains("fit") && !j.at("fit").is_null())
+        {
+            p.SetFit(j.at("fit").get<int>());
+        }
+
+        if (j.contains("unfit") && !j.at("unfit").is_null())
+        {
+            p.SetUnfit(j.at("unfit").get<int>());
+        }
+
+        if (j.contains("suspect") && !j.at("suspect").is_null())
+        {
+            p.SetSuspect(j.at("suspect").get<int>());
+        }
+
+        if (j.contains("counterfeit") && !j.at("counterfeit").is_null())
+        {
+            p.SetCounterfeit(j.at("counterfeit").get<int>());
+        }
+
+        if (j.contains("inked") && !j.at("inked").is_null())
+        {
+            p.SetInked(j.at("inked").get<int>());
+        }
+    }
+
+    inline void from_json(const nlohmann::json& j, StorageCashCountClass& p)
+    {
+        if (j.contains("unrecognized") && !j.at("unrecognized").is_null())
+        {
+            p.SetUnrecognized(j.at("unrecognized").get<int>());
+        }
+
+        if (j.contains("itemCounts") && !j.at("itemCounts").is_null())
+        {
+            std::map<std::string, CashItemCountClass> itemCounts;
+
+            for (const auto& [key, value] : j.at("itemCounts").items())
+            {
+                itemCounts.emplace(
+                    key,
+                    value.get<CashItemCountClass>());
+            }
+
+            p.SetItemCounts(itemCounts);
+        }
+    }
 	//------------------------------------------------------------------------
 
 
     /// <summary>
-    /// Counts of the cash unit updated by the device class
+	/// Этот класс представляет собой структуру, которая может быть использована для представления количества предметов в единице хранения,
+    /// включая детали о том, сколько предметов было перемещено из единицы хранения (StorageCashOutCount) 
+    /// и сколько предметов было перемещено в единицу хранения (StorageCashInCount) с момента последнего пополнения. 
+    /// Это может быть полезно для устройств, которые могут предоставлять информацию о перемещении предметов, 
+    /// а также общее количество предметов в единице хранения. Если устройство не предоставляет информацию о перемещении предметов, 
+    /// то StorageCashOutCount и StorageCashInCount могут быть null, и только общее количество будет заполнено.
     /// </summary>
     class CashUnitCountClass
     {
@@ -466,7 +561,9 @@ namespace XFS4IoTFramework::Storage
         }
 
         /// <summary>
-        /// Total count of the items in the unit
+		/// Общее количество предметов в единице хранения. Это может быть использовано для устройств, 
+        /// которые не имеют возможности предоставлять подробные сведения о предметах, 
+        /// но могут предоставлять общее количество предметов в единице хранения.
         /// </summary>
         int GetCount() const { return count_; }
         void SetCount(int count) { count_ = count; }
@@ -494,9 +591,9 @@ namespace XFS4IoTFramework::Storage
         }
 
     private:
-        std::shared_ptr<StorageCashOutCountClass> storageCashOutCount_;
-        std::shared_ptr<StorageCashInCountClass> storageCashInCount_;
-        int count_;
+		std::shared_ptr<StorageCashOutCountClass> storageCashOutCount_; // этот класс должен быть определен отдельно и содержать информацию о количестве предметов, перемещенных из единицы хранения
+		std::shared_ptr<StorageCashInCountClass> storageCashInCount_; // этот класс должен быть определен отдельно и содержать информацию о количестве предметов, перемещенных в единицу хранения
+		int count_; // общее количество предметов в единице хранения. 
     };
 
 
@@ -997,7 +1094,7 @@ namespace XFS4IoTFramework::Storage
     }
 //
     /// <summary>
-    /// Configuration of the cash unit
+	/// Конфигурация единицы хранения наличных
     /// </summary>
     class CashConfigurationClass
     {
@@ -1045,9 +1142,11 @@ namespace XFS4IoTFramework::Storage
         void SetCurrency(const std::string& currency) { currency_ = currency; }
 
         /// <summary>
-        /// Absolute value of all contents, 0 if mixed. May only be modified in an exchange state if applicable. May be 
-        /// a floating point value to allow for coins and notes which have a value which is not a whole multiple
-        /// of the currency unit.
+		/// Абсолютная стоимость единицы хранения. 
+        /// Это может быть использовано для устройств, 
+        /// которые не имеют возможности предоставлять подробные 
+        /// сведения о предметах, но могут предоставлять общую стоимость предметов в единице хранения. 
+        /// Например, если единица хранения содержит 10 банкнот по 20 долларов, то значение будет 200 долларов.
         /// </summary>
         double GetValue() const { return value_; }
         void SetValue(double value) { value_ = value; }
@@ -1065,13 +1164,13 @@ namespace XFS4IoTFramework::Storage
         void SetLowThreshold(int lowThreshold) { lowThreshold_ = lowThreshold; }
 
         /// <summary>
-        /// If true, items cannot be accepted into the storage unit in Cash In operations.
+		/// Если true, предметы не могут быть внесены в единицу хранения в операциях Cash In.
         /// </summary>
         bool GetAppLockIn() const { return appLockIn_; }
         void SetAppLockIn(bool appLockIn) { appLockIn_ = appLockIn; }
 
         /// <summary>
-        /// If true, items cannot be dispensed from the storage unit in Cash Out operations.
+		/// Если true, предметы не могут быть удалены из единицы хранения в операциях Cash Out.
         /// </summary>
         bool GetAppLockOut() const { return appLockOut_; }
         void SetAppLockOut(bool appLockOut) { appLockOut_ = appLockOut; }
@@ -1125,14 +1224,17 @@ namespace XFS4IoTFramework::Storage
         {}
 
         /// <summary>
-        /// Assigned by the device class. Will be a unique number which can be used to determine 
-        /// usNumber in XFS 3.x migration. This can change as cash storage units are added and removed
-        /// from the storage collection.
+		/// Присвоено классом устройства. 
+        /// Будет уникальным номером, который можно использовать для 
+        /// определения usNumber при миграции XFS 3.x. Этот номер 
+        /// может измениться по мере добавления и 
+        /// удаления единиц хранения наличных из коллекции хранения.
         /// </summary>
         int GetIndex() const { return index_; }
 
         /// <summary>
-        /// The cash related items which are in the storage unit at the last replenishment.
+		/// Поддерживается ли устройством точность подсчета. 
+        /// Если false, Accuracy всегда возвращает NotSupported.
         /// </summary>
         std::shared_ptr<StorageCashCountClass> GetInitialCounts() const { return initialCounts_; }
         void SetInitialCounts(std::shared_ptr<StorageCashCountClass> initialCounts)
@@ -1236,7 +1338,7 @@ namespace XFS4IoTFramework::Storage
 //
 //
     /// <summary>
-    /// Structure receiving from the device
+	/// Класс конфигурации денежного блока, который может быть использован для создания денежного блока и его хранения в CashUnitStorage. Содержит свойства, которые описывают идентификатор денежного блока, физическое расположение, вместимость, серийный номер, аппаратные возможности, текущую конфигурацию и дополнительную информацию о денежном блоке.
     /// </summary>
     class CashUnitStorageConfiguration
     {
@@ -1260,7 +1362,7 @@ namespace XFS4IoTFramework::Storage
         }
 
         /// <summary>
-        /// An identifier which can be used for cUnitID in CDM/CIM XFS 3.x migration. Not required if not applicable.
+		/// идентификатор, который может быть использован для cUnitID в миграции CDM/CIM XFS 3.x. Не требуется, если не применимо.
         /// </summary>
         const std::string& GetId() const { return id_; }
 
@@ -1275,33 +1377,33 @@ namespace XFS4IoTFramework::Storage
         int GetCapacity() const { return capacity_; }
 
         /// <summary>
-        /// The storage unit's serial number if it can be read electronically.
+		/// Серийный номер блока хранения, если он может быть считан электронным способом. Если серийный номер не может быть считан, это может быть null или пустой строкой.
         /// </summary>
         const std::string& GetSerialNumber() const { return serialNumber_; }
 
         /// <summary>
-        /// The hardware capabilities of the cash unit
+		/// Полные аппаратные возможности денежного блока, поддерживаемые устройством. Если устройство не поддерживает получение возможностей, это может быть null. Если устройство поддерживает получение возможностей, но произошла ошибка при получении возможностей, это также может быть null. Если устройство поддерживает получение возможностей и успешно получает их, это не будет null.
         /// </summary>
         std::shared_ptr<CashCapabilitiesClass> GetCapabilities() const { return capabilities_; }
 
         /// <summary>
-        /// Current configuration set by the device
+		/// Текущая конфигурация, установленная устройством. Может быть null, если устройство не поддерживает получение конфигурации или если произошла ошибка при получении конфигурации.
         /// </summary>
         std::shared_ptr<CashConfigurationClass> GetConfiguration() const { return configuration_; }
 
         /// <summary>
-        /// Additional cash unit information
+		/// Дополнительная информация о денежном блоке, поддерживаемая устройством. Содержит индекс, который может быть использован для usNumber в миграции CDM/CIM XFS 3.x, и информацию о поддержке точности подсчета.
         /// </summary>
         const CashUnitAdditionalInfoClass& GetCashUnitAdditionalInfo() const { return cashUnitAdditionalInfo_; }
 
     private:
-        std::string id_;
-        std::string positionName_;
-        int capacity_;
-        std::string serialNumber_;
-        std::shared_ptr<CashCapabilitiesClass> capabilities_;
-        std::shared_ptr<CashConfigurationClass> configuration_;
-        CashUnitAdditionalInfoClass cashUnitAdditionalInfo_;
+		std::string id_; // Идентификатор, который может быть использован для cUnitID в миграции CDM/CIM XFS 3.x. Не требуется, если не применимо.
+		std::string positionName_;  // Фиксированное физическое имя для позиции.
+		int capacity_;  // Вместимость
+		std::string serialNumber_;  // Серийный номер блока хранения, если он может быть считан электронным способом.
+		std::shared_ptr<CashCapabilitiesClass> capabilities_;   // Аппаратные возможности денежного блока
+		std::shared_ptr<CashConfigurationClass> configuration_; // Текущая конфигурация, установленная устройством
+		CashUnitAdditionalInfoClass cashUnitAdditionalInfo_;    // Дополнительная информация о денежном блоке
     };
 
     /// <summary>
@@ -1356,52 +1458,52 @@ namespace XFS4IoTFramework::Storage
 
 
 
-        inline void to_json(nlohmann::json& j, const CashItemCountClass& c)
-        {
-            j = nlohmann::json{
-                {"fit", c.GetFit()},
-                {"unfit", c.GetUnfit()},
-                {"suspect", c.GetSuspect()},
-                {"counterfeit", c.GetCounterfeit()},
-                {"inked", c.GetInked()}
-            };
-        }
+        //inline void to_json(nlohmann::json& j, const CashItemCountClass& c)
+        //{
+        //    j = nlohmann::json{
+        //        {"fit", c.GetFit()},
+        //        {"unfit", c.GetUnfit()},
+        //        {"suspect", c.GetSuspect()},
+        //        {"counterfeit", c.GetCounterfeit()},
+        //        {"inked", c.GetInked()}
+        //    };
+        //}
 
-        inline void from_json(const nlohmann::json& j, CashItemCountClass& c)
-        {
-            // Используем value(...) чтобы работать с отсутствующими полями
-            c.SetFit(j.value("fit", 0));
-            c.SetUnfit(j.value("unfit", 0));
-            c.SetSuspect(j.value("suspect", 0));
-            c.SetCounterfeit(j.value("counterfeit", 0));
-            c.SetInked(j.value("inked", 0));
-        }
+        //inline void from_json(const nlohmann::json& j, CashItemCountClass& c)
+        //{
+        //    // Используем value(...) чтобы работать с отсутствующими полями
+        //    c.SetFit(j.value("fit", 0));
+        //    c.SetUnfit(j.value("unfit", 0));
+        //    c.SetSuspect(j.value("suspect", 0));
+        //    c.SetCounterfeit(j.value("counterfeit", 0));
+        //    c.SetInked(j.value("inked", 0));
+        //}
 
-        inline void to_json(nlohmann::json& j, const StorageCashCountClass& s)
-        {
-            j = nlohmann::json::object();
-            j["unrecognized"] = s.GetUnrecognized();
+        //inline void to_json(nlohmann::json& j, const StorageCashCountClass& s)
+        //{
+        //    j = nlohmann::json::object();
+        //    j["unrecognized"] = s.GetUnrecognized();
 
-            nlohmann::json items = nlohmann::json::object();
-            for (const auto& kv : s.GetItemCounts())
-                items[kv.first] = kv.second; // вызовет to_json(CashItemCountClass)
+        //    nlohmann::json items = nlohmann::json::object();
+        //    for (const auto& kv : s.GetItemCounts())
+        //        items[kv.first] = kv.second; // вызовет to_json(CashItemCountClass)
 
-            j["itemCounts"] = std::move(items);
-        }
+        //    j["itemCounts"] = std::move(items);
+        //}
 
-        inline void from_json(const nlohmann::json& j, StorageCashCountClass& s)
-        {
-            s.SetUnrecognized(j.value("unrecognized", 0));
+        //inline void from_json(const nlohmann::json& j, StorageCashCountClass& s)
+        //{
+        //    s.SetUnrecognized(j.value("unrecognized", 0));
 
-            std::map<std::string, CashItemCountClass> tmp;
-            if (j.contains("itemCounts") && j["itemCounts"].is_object())
-            {
-                for (auto it = j["itemCounts"].begin(); it != j["itemCounts"].end(); ++it)
-                {
-                    tmp[it.key()] = it.value().get<CashItemCountClass>();
-                }
-            }
-            s.SetItemCounts(tmp);
-        }
+        //    std::map<std::string, CashItemCountClass> tmp;
+        //    if (j.contains("itemCounts") && j["itemCounts"].is_object())
+        //    {
+        //        for (auto it = j["itemCounts"].begin(); it != j["itemCounts"].end(); ++it)
+        //        {
+        //            tmp[it.key()] = it.value().get<CashItemCountClass>();
+        //        }
+        //    }
+        //    s.SetItemCounts(tmp);
+        //}
 
 }

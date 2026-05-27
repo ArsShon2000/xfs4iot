@@ -1,5 +1,5 @@
 ﻿#include "GetServiceHandler.hpp"
-
+#include "../core/ServicePublisher/Events/ServiceDetailEvent.hpp"
 #include <format>
 #include <stdexcept>
 
@@ -33,6 +33,12 @@ namespace XFS4IoTServer
         std::shared_ptr<XFS4IoT::MessageBase> command,
         std::stop_token)
     {
+        using ServiceDetailPayload =
+            XFS4IoT::ServicePublisher::Events::ServiceDetailEventPayloadData;
+
+        using ServiceDetailEvent =
+            XFS4IoT::ServicePublisher::Events::ServiceDetailEvent;
+
         logger_->trace("GetServiceHandler::Handle запущен");
 
         if (!command) {
@@ -59,6 +65,24 @@ namespace XFS4IoTServer
             logger_->trace(std::format("Опубликованный URI WebSocket: {}", s->GetWSUri()));
             services.emplace_back(s->GetWSUri());
         }
+
+        // отправляем событие с деталями сервиса для каждого сервиса, предоставляемого издателем
+        auto eventPayload = std::make_shared<ServiceDetailPayload>(
+            std::optional<std::string>{"DORS"},
+            std::optional<std::vector<ServiceClass>>{services});
+
+        auto serviceDetailEvent =
+            std::make_shared<ServiceDetailEvent>(
+                header.RequestId().value(),
+                eventPayload);
+
+        logger_->trace(std::format(
+            "GetServiceHandler serviceDetailEvent json: {}",
+            serviceDetailEvent->Serialise()));
+
+        co_await connection_->SendMessageAsync(serviceDetailEvent);
+
+
         //services.emplace_back(servicePublisher_->GetWSUri());
         //services.emplace_back("ws://127.0.0.1:80/xfs4iot/v1.0/");
 

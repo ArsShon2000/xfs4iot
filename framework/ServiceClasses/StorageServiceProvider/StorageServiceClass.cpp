@@ -267,7 +267,7 @@ namespace XFS4IoTServer
                         deltaKey,
                         unit->GetUnit()->GetStatus()->GetStorageCashOutCount()->GetDistributed(),
                         deltaValue->GetStorageCashOutCount()->GetDistributed());
-                    // ... (аналогично для других полей)
+                        
                 }
 
                 if (deltaValue->GetStorageCashInCount())

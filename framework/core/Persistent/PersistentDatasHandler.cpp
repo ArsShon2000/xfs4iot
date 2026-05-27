@@ -17,12 +17,12 @@ std::mutex PersistentDatasHandler::m_instanceMutex;
 void PersistentDatasHandler::create(const nlohmann::json& initialContent) {
 	// Копируем начальное содержимое
 	nlohmann::json content = initialContent;
-	// Удаляем SIGNATURE_KEY, если он есть, чтобы подпись не включала его
-	if (content.contains(SIGNATURE_KEY)) {
-		content.erase(SIGNATURE_KEY);
-	}
-	// Вычисляем подпись для содержимого без SIGNATURE_KEY
-	content[SIGNATURE_KEY] = calculateSignature(content);
+// Удаляем SIGNATURE_KEY, если он есть, чтобы подпись не включала его
+//if (content.contains(SIGNATURE_KEY)) {
+//	content.erase(SIGNATURE_KEY);
+//}
+//// Вычисляем подпись для содержимого без SIGNATURE_KEY
+//content[SIGNATURE_KEY] = calculateSignature(content);
 
 	m_file.close();
 	m_file.open(pinstance_->m_filePath, std::ios::binary | std::ios::in | std::ios::out);
@@ -54,23 +54,23 @@ nlohmann::json PersistentDatasHandler::read() const {
 
 		pinstance_->m_filePath = PersistentDatasHandler::createPersistentFile();
 		nlohmann::json initialContent = {
-		   {"signature", pinstance_->m_encryptionKey},
+//{"signature", pinstance_->m_encryptionKey},
 		   {"FRAUD_ATTEMPTS_COUNT", 0}
 		};
 		pinstance_->create(initialContent);
 		content = loadFromFile();
 	}
-	// Проверяем наличие подписи
-	if (!content.contains(SIGNATURE_KEY)) {
-		throw PersistentDatasHandlerException("Signature not found in JSON file");
-	}
-	// Извлекаем и удаляем подпись
-	std::string storedSignature = content[SIGNATURE_KEY].get<std::string>();
-	content.erase(SIGNATURE_KEY);
-	// Проверяем подпись
-	if (!verifySignature(content, storedSignature)) {
-		throw PersistentDatasHandlerException("Invalid signature: JSON file may have been tampered");
-	}
+//// Проверяем наличие подписи
+//if (!content.contains(SIGNATURE_KEY)) {
+//	throw PersistentDatasHandlerException("Signature not found in JSON file");
+//}
+//// Извлекаем и удаляем подпись
+//std::string storedSignature = content[SIGNATURE_KEY].get<std::string>();
+//content.erase(SIGNATURE_KEY);
+//// Проверяем подпись
+//if (!verifySignature(content, storedSignature)) {
+//	throw PersistentDatasHandlerException("Invalid signature: JSON file may have been tampered");
+//}
 	return content;
 }
 
@@ -93,8 +93,8 @@ void PersistentDatasHandler::update(const std::string& path, const nlohmann::jso
 		current = &(*current)[keys[i]];
 	}
 	(*current)[keys.back()] = value;
-	// Обновляем подпись
-	content[SIGNATURE_KEY] = calculateSignature(content);
+//// Обновляем подпись
+//content[SIGNATURE_KEY] = calculateSignature(content);
 	// Сохраняем JSON
 	if (saveToFile(content))
 	{
@@ -132,8 +132,8 @@ void PersistentDatasHandler::remove(const std::string& path) {
 	else {
 		throw PersistentDatasHandlerException("Key not found: " + keys.back());
 	}
-	// Обновляем подпись
-	content[SIGNATURE_KEY] = calculateSignature(content);
+//// Обновляем подпись
+//content[SIGNATURE_KEY] = calculateSignature(content);
 	// Сохраняем JSON
 	if (saveToFile(content))
 	{
@@ -178,7 +178,8 @@ bool PersistentDatasHandler::saveToFile(const nlohmann::json& content) const {
 		beforeContent = loadFromFile();
 		std::ofstream backup(backupPath, std::ios::binary | std::ios::trunc);
 		if (backup.is_open()) {
-			std::string oldData = encrypt(beforeContent.dump());
+//std::string oldData = encrypt(beforeContent.dump());
+			std::string oldData = beforeContent.dump();
 			backup.write(oldData.data(), oldData.size());
 			backup.close();
 		}
@@ -189,7 +190,8 @@ bool PersistentDatasHandler::saveToFile(const nlohmann::json& content) const {
 
 	// 2. Сериализуем и шифруем новый JSON
 	std::string serialized = content.dump();
-	std::string encrypted = encrypt(serialized);
+//std::string encrypted = encrypt(serialized);
+	std::string encrypted = serialized;
 
 	// 3. Перезаписываем файл
 	{
@@ -205,21 +207,21 @@ bool PersistentDatasHandler::saveToFile(const nlohmann::json& content) const {
 	}
 
 	// 4. Проверяем целостность новой записи
-	bool isValid = false;
-	try {
-		nlohmann::json afterContent = loadFromFile();
-		if (afterContent.contains(SIGNATURE_KEY)) {
-			std::string sig = afterContent[SIGNATURE_KEY];
-			afterContent.erase(SIGNATURE_KEY);
-			if (verifySignature(afterContent, sig)) {
-				isValid = true;
-			}
-		}
-	}
-	catch (const std::exception& e) {
-		std::cerr << " Ошибка проверки после записи: " << e.what() << std::endl;
-		m_log->trace(std::format("{}()  Ошибка проверки после записи: {}", __FUNCTION__, e.what()), LOGLEVELPERSISTENT);
-	}
+	bool isValid = true; // потом сделаю falsre
+//try {
+//	nlohmann::json afterContent = loadFromFile();
+//	if (afterContent.contains(SIGNATURE_KEY)) {
+//		std::string sig = afterContent[SIGNATURE_KEY];
+//		afterContent.erase(SIGNATURE_KEY);
+//		if (verifySignature(afterContent, sig)) {
+//			isValid = true;
+//		}
+//	}
+//}
+//catch (const std::exception& e) {
+//	std::cerr << " Ошибка проверки после записи: " << e.what() << std::endl;
+//	m_log->trace(std::format("{}()  Ошибка проверки после записи: {}", __FUNCTION__, e.what()), LOGLEVELPERSISTENT);
+//}
 
 	// 5. Если запись некорректна — откатываем изменения
 	if (!isValid) {
@@ -259,7 +261,7 @@ bool PersistentDatasHandler::saveToFile(const nlohmann::json& content) const {
 
 			m_log->trace(std::format("{}() 🔁 Попытка создания нового файла", __FUNCTION__), LOGLEVELPERSISTENT);
 			nlohmann::json initialContent = {
-				{"signature", m_encryptionKey},
+//{"signature", m_encryptionKey},
 				//{"DISABLE_CU_MANIPULATED", 1},
 				{"FRAUD_ATTEMPTS_COUNT", 0}
 			};
@@ -297,11 +299,11 @@ nlohmann::json PersistentDatasHandler::loadFromFile() const {
 			throw PersistentDatasHandlerException("Failed to read file: " + m_filePath);
 		}
 	}
-	// Расшифровываем данные
-	std::string decrypted = decrypt(encrypted);
+//// Расшифровываем данные
+//std::string decrypted = decrypt(encrypted); 
 	// Парсим JSON
 	try {
-		return nlohmann::json::parse(decrypted);
+		return nlohmann::json::parse(encrypted); //потом верну decrypted
 	}
 	catch (const nlohmann::json::parse_error& e) {
 		throw PersistentDatasHandlerException("Failed to parse JSON: " + std::string(e.what()));
@@ -770,3 +772,207 @@ void PersistentDatasHandler::print()
 		m_log->critical(std::format("{}(): Ошибка при чтения dorsPersistentDatas...json, возможно было изменение вне драйвера", __FUNCTION__), LOGLEVELPERSISTENT);
 	}
 }
+
+
+// ============================================================================
+// CashInStatus
+// ============================================================================
+nlohmann::json PersistentDatasHandler::getCashInStatus(bool reloadFromFile)
+{
+	try
+	{
+		if (!reloadFromFile && !cashInStatus_.is_null())
+		{
+			return cashInStatus_;
+		}
+
+		nlohmann::json content = read();
+
+		if (!content.contains("CashInStatus") ||
+			!content["CashInStatus"].is_object())
+		{
+			cashInStatus_ = {
+				{"Status", 0},
+				{"NumOfRefused", 0},
+				{"Unrecognized", 0},
+				{"AcceptedItems", nlohmann::json::object()},
+				{"UnfitItems", nlohmann::json::object()},
+				{"DisputedItems", nlohmann::json::object()},
+				{"CashItemCount", nlohmann::json::object()}
+			};
+
+			update(CASH_IN_STATUS_PATH, cashInStatus_);
+			return cashInStatus_;
+		}
+
+		cashInStatus_ = content["CashInStatus"];
+		return cashInStatus_;
+	}
+	catch (const std::exception& e)
+	{
+		if (m_log)
+		{
+			m_log->error(
+				std::format("{}(): ошибка чтения CashInStatus: {}", __FUNCTION__, e.what()),
+				LOGLEVELPERSISTENT);
+		}
+
+		cashInStatus_ = {
+			{"Status", 0},
+			{"NumOfRefused", 0},
+			{"Unrecognized", 0},
+			{"AcceptedItems", nlohmann::json::object()},
+			{"UnfitItems", nlohmann::json::object()},
+			{"DisputedItems", nlohmann::json::object()},
+			{"CashItemCount", nlohmann::json::object()}
+		};
+
+		return cashInStatus_;
+	}
+}
+
+bool PersistentDatasHandler::setCashInStatus(const nlohmann::json& cashInStatus)
+{
+	try
+	{
+		if (!cashInStatus.is_object())
+			return false;
+
+		update(CASH_IN_STATUS_PATH, cashInStatus);
+		cashInStatus_ = cashInStatus;
+
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+bool PersistentDatasHandler::setCashInTransactionStatus(int status)
+{
+	return templateSetter(
+		CASH_IN_STATUS_STATUS_PATH,
+		status,
+		cashInStatus_["Status"]);
+}
+
+int PersistentDatasHandler::getCashInTransactionStatus(bool reloadFromFile)
+{
+	auto status = getCashInStatus(reloadFromFile);
+
+	if (!status.contains("Status") || !status["Status"].is_number_integer())
+		return 0;
+
+	return status["Status"].get<int>();
+}
+
+bool PersistentDatasHandler::setCashInNumOfRefused(uint16_t count)
+{
+	return templateSetter(
+		CASH_IN_STATUS_REFUSED_PATH,
+		count,
+		cashInStatus_["NumOfRefused"]);
+}
+
+uint16_t PersistentDatasHandler::getCashInUnrecognized(bool reloadFromFile)
+{
+	auto status = getCashInStatus(reloadFromFile);
+
+	if (!status.contains("Unrecognized") ||
+		!status["Unrecognized"].is_number_unsigned())
+	{
+		return 0;
+	}
+
+	return status["Unrecognized"].get<uint16_t>();
+}
+
+bool PersistentDatasHandler::setCashInUnrecognized(uint16_t count)
+{
+	return templateSetter(
+		CASH_IN_STATUS_UNRECOGNIZED_PATH,
+		count,
+		cashInStatus_["Unrecognized"]);
+}
+
+uint16_t PersistentDatasHandler::getCashInNumOfRefused(bool reloadFromFile)
+{
+	auto status = getCashInStatus(reloadFromFile);
+
+	if (!status.contains("NumOfRefused") ||
+		!status["NumOfRefused"].is_number_unsigned())
+	{
+		return 0;
+	}
+
+	return status["NumOfRefused"].get<uint16_t>();
+}
+
+bool PersistentDatasHandler::setCashInCashItemCount(const nlohmann::json& count)
+{
+	return templateSetter(
+		CASH_IN_STATUS_CASH_ITEM_COUNT_PATH,
+		count,
+		cashInStatus_["CashItemCount"]);
+}
+
+nlohmann::json PersistentDatasHandler::getCashInCashItemCount(bool reloadFromFile)
+{
+	auto status = getCashInStatus(reloadFromFile);
+
+	if (!status.contains("CashItemCount") ||
+		!status["CashItemCount"].is_number_unsigned())
+	{
+		return 0;
+	}
+
+	return status["CashItemCount"].get<uint16_t>();
+}
+
+bool PersistentDatasHandler::setCashInAcceptedItems(const nlohmann::json& acceptedItems)
+{
+	try
+	{
+		if (!acceptedItems.is_object())
+			return false;
+
+		update(CASH_IN_STATUS_ACCEPTED_ITEMS_PATH, acceptedItems);
+		cashInStatus_["AcceptedItems"] = acceptedItems;
+
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+nlohmann::json PersistentDatasHandler::getCashInAcceptedItems(bool reloadFromFile)
+{
+	auto status = getCashInStatus(reloadFromFile);
+
+	if (!status.contains("AcceptedItems") ||
+		!status["AcceptedItems"].is_object())
+	{
+		return nlohmann::json::object();
+	}
+
+	return status["AcceptedItems"];
+}
+
+bool PersistentDatasHandler::resetCashInStatus()
+{
+	nlohmann::json emptyStatus = {
+		{"Status", 0},
+		{"NumOfRefused", 0},
+		{"Unrecognized", 0},
+		{"AcceptedItems", nlohmann::json::object()},
+		{"UnfitItems", nlohmann::json::object()},
+		{"DisputedItems", nlohmann::json::object()},
+		{"CashItemCount", nlohmann::json::object()}
+	};
+
+	return setCashInStatus(emptyStatus);
+}
+

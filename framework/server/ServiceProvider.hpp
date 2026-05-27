@@ -105,13 +105,12 @@ namespace XFS4IoTServer
         void SetMessagesSupported(
             const std::map<std::string, XFS4IoT::MessageTypeInfo>& messagesSupported) override
         {
-            messagesSupported_ = messagesSupported;
             m_messagesSupported = messagesSupported;
         }
 
         std::map<std::string, XFS4IoT::MessageTypeInfo> GetMessagesSupported() const override
         {
-            return messagesSupported_;
+            return m_messagesSupported;
         }
 
 		// ICommandDispatcher методы будут реализованы в CommandDispatcher, так что здесь мы можем просто использовать их реализацию без переопределения
@@ -162,7 +161,6 @@ namespace XFS4IoTServer
         std::shared_ptr<IDevice> device_;
         std::shared_ptr<ILogger> logger_;
         std::shared_ptr<IJsonSchemaValidator> jsonSchemaValidator_;
-        std::map<std::string, XFS4IoT::MessageTypeInfo> messagesSupported_;
 
         // Добавленные поля для io_context
         boost::asio::io_context ioContext_;

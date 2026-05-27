@@ -336,7 +336,7 @@ namespace XFS4IoTServer::Common
         {
             std::optional<std::vector<XFS4IoT::CashAcceptor::PosCapsClass>> positions;
 
-            if (!cashAcceptorCaps->GetPositions().has_value())
+            if (cashAcceptorCaps->GetPositions().has_value())
             {
                 std::vector<XFS4IoT::CashAcceptor::PosCapsClass> posList;
 
@@ -619,15 +619,14 @@ namespace XFS4IoTServer::Common
 
         const auto messagesSupported = provider_->GetMessagesSupported();
 
-        for (const auto& [name, info] : messagesSupported)
-        {
-            const std::string prefix = std::format("{}.", XFS4IoT::Common::toString(interfaceName));
+        //for (const auto& [name, info] : messagesSupported)
+        //{
+        //    const std::string prefix = std::format("{}.", XFS4IoT::Common::toString(interfaceName));
 
-            // В C# StartsWith($"{InterfaceName}.")
-            // Там InterfaceName = "Common", "CashManagement", ...
-            // Если твой toString(NameEnum) возвращает lowerCamelCase, то здесь это не подойдет.
-            // Тогда используй отдельный helper для exact XFS interface name.
-        }
+        //    // Там InterfaceName = "Common", "CashManagement", ...
+        //    // Если твой toString(NameEnum) возвращает lowerCamelCase, то здесь это не подойдет.
+        //    // Тогда используй отдельный helper для exact XFS interface name.
+        //}
 
         // Правильнее так:
         auto interfaceNameToPrefix = [](InterfaceClass::NameEnum v) -> std::string

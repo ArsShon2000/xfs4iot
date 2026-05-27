@@ -475,6 +475,10 @@ namespace FS365::HW::Dors {
             m_bPortIsInitialized = initialized;
         }
 
+        bool GetSoftwareConfigurationFault() const {
+            return m_bSoftwareConfigurationFault;
+		}
+
         /**
          * @brief Постановка задачи в очередь исполнителя.
          * @param task Задача для выполнения.
@@ -527,6 +531,8 @@ namespace FS365::HW::Dors {
         std::mutex m_portMutex;                              /**< Мьютекс для последовательного доступа к порту */
         POLL_RES m_lastState = POLL_RES::Unknown;            /**< Последнее прочитанное состояние устройства */
         uint8_t m_ucCommandCounter = 0x03;                    /**< Счётчик команд протокола (инкрементируется) */
+        /// Флаг некорректной конфигурации ПО
+        bool m_bSoftwareConfigurationFault;
 
         static std::mutex m_SendCommand_mutex;               /**< Статический мьютекс для сериализации отправки команд */
 
