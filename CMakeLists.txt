@@ -33,7 +33,7 @@ endif()
 # Настройка Doxygen для генерации документации ###########
 find_package(Doxygen REQUIRED)
 set(DOXYGEN_IN  ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
-set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARYDir}/Doxyfile)
+set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 add_custom_target(doc
 	COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
@@ -53,6 +53,7 @@ add_executable(xfs4iot_cpp_sp
 	Devices/CashAcceptorSample/Managers/PowerUpManager/PowerUpManager.cpp
 	
 	Devices/CashAcceptorSample/ExecuteFunctions/ExecuteCashInStart/ExecuteCashInStart.cpp
+	#Devices/CashAcceptorSample/ExecuteFunctions/ExecuteCashIn/ExecuteCashIn.cpp
 
 
 	Devices/HW/SearchDevices/SearchDevices.cpp
@@ -84,8 +85,6 @@ add_executable(xfs4iot_cpp_sp
 	framework/ServiceClasses/CommonServiceProvider/Handlers/CapabilitiesHandler.cpp
 	framework/ServiceClasses/CommonServiceProvider/Handlers/SetVersionsHandler.cpp
 	framework/ServiceClasses/CommonServiceProvider/CommonServiceClass.cpp
-
-	
 
 	framework/ServiceClasses/CashManagementServiceProvider/CashManagementServiceClass.cpp
 	# framework/ServiceClasses/CashManagementServiceProvider/Events/RetractCommandEvents.cpp

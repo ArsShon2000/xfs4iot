@@ -7,6 +7,7 @@
 
 #include <boost/asio.hpp>
 #include <thread>
+#include <set>
 #include <utility>
 #include "EndpointDetails.hpp"
 
@@ -19,6 +20,12 @@ namespace XFS4IoTServer
         , public std::enable_shared_from_this<ServiceProvider>
     {
     public:
+        struct MessageVersionSupport
+        {
+            std::string minVersion;
+            std::set<std::string> supportedVersions;
+        };
+
         ServiceProvider(const EndpointDetails& endpointDetails,
             const std::string& name,
             const std::vector<XFS4IoT::XFSConstants::ServiceClass>& services,
@@ -90,7 +97,7 @@ namespace XFS4IoTServer
                     catch (const std::exception& ex) {
                         logger_->warn(std::format("{}() - ServiceProvider: Не удалось отправить событие соединению: {}", __FUNCTION__,
                             ex.what()));
-						// Продолжить отправку другим соединениям, несмотря на ошибку
+						// Продолжим отправку другим соединениям, несмотря на ошибку
                     }
                 }
             }
@@ -108,9 +115,20 @@ namespace XFS4IoTServer
             m_messagesSupported = messagesSupported;
         }
 
+        void SetEventsSupported(
+            const std::map<std::string, XFS4IoT::MessageTypeInfo>& eventsSupported) override
+        {
+            m_eventsSupported = eventsSupported;
+        }
+
         std::map<std::string, XFS4IoT::MessageTypeInfo> GetMessagesSupported() const override
         {
             return m_messagesSupported;
+        }
+
+        std::map<std::string, XFS4IoT::MessageTypeInfo> GetEventsSupported() const override
+        {
+            return m_eventsSupported;
         }
 
 		// ICommandDispatcher методы будут реализованы в CommandDispatcher, так что здесь мы можем просто использовать их реализацию без переопределения

@@ -38,6 +38,22 @@ namespace XFS4IoTServer
         boost::asio::awaitable<void> SendMessageAsync(
             std::shared_ptr<XFS4IoT::MessageBase> message) override;
 
+        void SetNegotiatedVersion(const std::string& messageName, std::string version)
+        {
+            std::lock_guard lock(stateMutex_);
+            negotiatedVersions_[messageName] = std::move(version);
+        }
+
+        std::optional<std::string> GetNegotiatedVersion(const std::string& messageName) const
+        {
+            std::lock_guard lock(stateMutex_);
+            auto it = negotiatedVersions_.find(messageName);
+            if (it == negotiatedVersions_.end())
+                return std::nullopt;
+
+            return it->second;
+        }
+
     private:
         boost::asio::awaitable<void> HandleIncomingMessage(
             const std::string& messageString,
@@ -52,6 +68,9 @@ namespace XFS4IoTServer
         std::mutex sendMutex_;
 
         static constexpr size_t MAX_BUFFER = 2 * 1024 * 1024; // 2MB
+
+        mutable std::mutex stateMutex_;
+        std::map<std::string, std::string> negotiatedVersions_;
     };
 
 	// потом перенесу в отдельный файл, если понадобится

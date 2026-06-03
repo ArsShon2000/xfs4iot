@@ -196,6 +196,16 @@ namespace XFS4IoTFramework::Storage
             return *this;
         }
 
+        CashItemCountClass& operator+=(const CashItemCountClass& other)
+        {
+            fit_ += other.fit_;
+            unfit_ += other.unfit_;
+            suspect_ += other.suspect_;
+            counterfeit_ += other.counterfeit_;
+            inked_ += other.inked_;
+            return *this;
+        }
+
         /// <summary>
         /// Count of genuine cash items which are fit for recycling.
         /// </summary>
@@ -254,7 +264,8 @@ namespace XFS4IoTFramework::Storage
 	//------------------------------------------------------------------------
 
     /// <summary>
-    /// Representing storage counts including L1 notes
+	/// Эта структура содержит информацию о количестве распознанных 
+    /// и нераспознанных предметов, обработанных интерфейсом наличных.
     /// </summary>
     class StorageCashCountClass
     {
@@ -310,6 +321,18 @@ namespace XFS4IoTFramework::Storage
                     itemCounts_[key] = CashItemCountClass(value);
                 }
             }
+            return *this;
+        }
+
+        StorageCashCountClass& operator+=(const StorageCashCountClass& other)
+        {
+            unrecognized_ += other.unrecognized_;
+
+            for (const auto& [itemKey, itemValue] : other.itemCounts_)
+            {
+                itemCounts_[itemKey] += itemValue;
+            }
+
             return *this;
         }
 
@@ -385,6 +408,7 @@ namespace XFS4IoTFramework::Storage
 
     private:
         int unrecognized_;
+        //  
         std::map<std::string, CashItemCountClass> itemCounts_;
     };
 
@@ -600,7 +624,8 @@ namespace XFS4IoTFramework::Storage
 	//------------------------------------------------------------------------
 
     /// <summary>
-    /// Representing count stored in the cash unit
+	/// Этот класс представляет собой структуру, которая может быть использована 
+    /// для представления количества предметов, перемещенных в единицу хранения.
     /// </summary>
     class StorageCashInCountClass
     {

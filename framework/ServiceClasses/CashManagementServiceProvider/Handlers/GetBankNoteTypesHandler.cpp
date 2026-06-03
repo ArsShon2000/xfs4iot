@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "../../../core/Exceptions.hpp"
+#include "../../../server/VersionNegotiationHelper.hpp"
 
 namespace XFS4IoTFramework::CashManagement
 {
@@ -14,6 +15,12 @@ namespace XFS4IoTFramework::CashManagement
 
     using GetBankNoteTypesCompletionPayloadData =
         XFS4IoT::CashManagement::Completions::GetBankNoteTypesCompletionPayloadData;
+
+    using GetBankNoteTypesCompletionV2 =
+        XFS4IoT::CashManagement::Completions::GetBankNoteTypesCompletionV2;
+
+    using GetBankNoteTypesCompletionV2PayloadData =
+        XFS4IoT::CashManagement::Completions::GetBankNoteTypesCompletionV2PayloadData;
 
     GetBankNoteTypesHandler::GetBankNoteTypesHandler(
         std::shared_ptr<XFS4IoTServer::IConnection> connection,
@@ -91,14 +98,52 @@ namespace XFS4IoTFramework::CashManagement
             getBankNoteTypesCmd,
             cancel);
 
-        auto response =
-            std::make_shared<GetBankNoteTypesCompletion>(
+        const auto version =
+            XFS4IoTServer::VersionNegotiationHelper::ResolveMessageVersion(
+                connection_,
+                provider_,
+                GetBankNoteTypesCompletion::CompletionName);
+
+        if (version == GetBankNoteTypesCompletion::Version)
+        {
+            std::shared_ptr<GetBankNoteTypesCompletionPayloadData> payloadV1 = nullptr;
+
+            if (result.payload)
+            {
+                payloadV1 = std::make_shared<GetBankNoteTypesCompletionPayloadData>(
+                    result.payload->getItems(),
+                    result.errorDescription.empty()
+                    ? std::nullopt
+                    : std::make_optional(result.errorDescription),
+                    XFS4IoT::ToString(result.completionCode));
+            }
+
+            auto response = std::make_shared<GetBankNoteTypesCompletion>(
+                getBankNoteTypesCmd->Header().RequestId().value(),
+                payloadV1,
+                result.completionCode,
+                result.errorDescription);
+
+            co_await connection_->SendMessageAsync(response);
+            co_return;
+        }
+
+        if (version == GetBankNoteTypesCompletionV2::Version)
+        {
+            auto response = std::make_shared<GetBankNoteTypesCompletionV2>(
                 getBankNoteTypesCmd->Header().RequestId().value(),
                 result.payload,
                 result.completionCode,
                 result.errorDescription);
 
-        co_await connection_->SendMessageAsync(response);
+            co_await connection_->SendMessageAsync(response);
+            co_return;
+        }
+
+        throw std::runtime_error(
+            std::format("Неподдерживаемая версия Completion {} для {}",
+                version,
+                GetBankNoteTypesCompletion::CompletionName));
     }
 
     boost::asio::awaitable<void> GetBankNoteTypesHandler::HandleError(
@@ -205,14 +250,50 @@ namespace XFS4IoTFramework::CashManagement
             errorDescription = ex.what();
         }
 
-        auto response =
-            std::make_shared<GetBankNoteTypesCompletion>(
+        const auto version =
+            XFS4IoTServer::VersionNegotiationHelper::ResolveMessageVersion(
+                connection_,
+                provider_,
+                GetBankNoteTypesCompletion::CompletionName);
+
+        if (version == GetBankNoteTypesCompletion::Version)
+        {
+            auto payloadV1 =
+                std::make_shared<GetBankNoteTypesCompletionPayloadData>(
+                    std::nullopt,
+                    errorDescription,
+                    XFS4IoT::ToString(errorCode));
+
+            auto response = std::make_shared<GetBankNoteTypesCompletion>(
                 getBankNoteTypesCmd->Header().RequestId().value(),
-                nullptr,
+                payloadV1,
                 errorCode,
                 errorDescription);
 
-        co_await connection_->SendMessageAsync(response);
+            co_await connection_->SendMessageAsync(response);
+            co_return;
+        }
+
+        if (version == GetBankNoteTypesCompletionV2::Version)
+        {
+            auto payloadV2 =
+                std::make_shared<GetBankNoteTypesCompletionV2PayloadData>(
+                    std::nullopt);
+
+            auto response = std::make_shared<GetBankNoteTypesCompletionV2>(
+                getBankNoteTypesCmd->Header().RequestId().value(),
+                payloadV2,
+                errorCode,
+                errorDescription);
+
+            co_await connection_->SendMessageAsync(response);
+            co_return;
+        }
+
+        throw std::runtime_error(
+            std::format("Неподдерживаемая версия Completion {} для {}",
+                version,
+                GetBankNoteTypesCompletion::CompletionName));
     }
 
     boost::asio::awaitable<GetBankNoteTypesHandler::CommandResult>
@@ -264,12 +345,12 @@ namespace XFS4IoTFramework::CashManagement
             }
         }
 
-        std::shared_ptr<GetBankNoteTypesCompletionPayloadData> payload = nullptr;
+        std::shared_ptr<GetBankNoteTypesCompletionV2PayloadData> payload = nullptr;
 
         if (items.has_value())
         {
             payload =
-                std::make_shared<GetBankNoteTypesCompletionPayloadData>(
+                std::make_shared<GetBankNoteTypesCompletionV2PayloadData>(
                     std::move(items));
         }
 

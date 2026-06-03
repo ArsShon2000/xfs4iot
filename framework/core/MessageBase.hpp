@@ -45,6 +45,15 @@ namespace XFS4IoT
 			}
 			throw std::logic_error("Unknown TypeEnum");
 		}
+		inline static MessageHeader::TypeEnum FromString(const std::string& v)
+		{
+			if (v == "command")      return MessageHeader::TypeEnum::Command;
+			if (v == "acknowledge")  return MessageHeader::TypeEnum::Acknowledge;
+			if (v == "event")        return MessageHeader::TypeEnum::Event;
+			if (v == "completion")   return MessageHeader::TypeEnum::Completion;
+			if (v == "unsolicited")  return MessageHeader::TypeEnum::Unsolicited;
+			throw std::logic_error("Unknown TypeEnum");
+		}
 
 		inline std::string ToString(MessageHeader::StatusEnum v) const
 		{

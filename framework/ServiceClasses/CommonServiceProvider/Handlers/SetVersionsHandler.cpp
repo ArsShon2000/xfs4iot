@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "../../../core/Exceptions.hpp"
+#include "../../../server/ClientConnection.hpp"
 
 namespace XFS4IoTFramework::Common
 {
@@ -213,6 +214,17 @@ namespace XFS4IoTFramework::Common
             };
         }
 
+        auto clientConnection =
+            std::dynamic_pointer_cast<XFS4IoTServer::ClientConnection>(connection_);
+
+        if (!clientConnection)
+        {
+            co_return CommandResult{
+                XFS4IoT::MessageHeader::CompletionCodeEnum::InternalError,
+                "SetVersions должен выполняться через ClientConnection."
+            };
+        }
+
         const bool noCommands =
             !payload->GetCommands().has_value() ||
             payload->GetCommands()->empty();
@@ -259,6 +271,7 @@ namespace XFS4IoTFramework::Common
                             supportedVersion)
                     };
                 }
+                clientConnection->SetNegotiatedVersion(name, requestedVersion);
             }
         }
 
@@ -290,6 +303,7 @@ namespace XFS4IoTFramework::Common
                             supportedVersion)
                     };
                 }
+                clientConnection->SetNegotiatedVersion(name, requestedVersion);
             }
         }
 

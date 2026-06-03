@@ -24,7 +24,7 @@ namespace XFS4IoT::CashAcceptor::Events
     {
     public:
         static constexpr const char* EventName = "CashAcceptor.InsertItemsEvent";
-        static constexpr const char* Version = "1.0";
+        static constexpr const char* Version = "2.0";
 
         explicit InsertItemsEvent(int requestId)
             : XFS4IoT::Events::Event<InsertItemsEventPayloadData>(

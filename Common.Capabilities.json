@@ -1,0 +1,155 @@
+{
+  "interfaces": [
+    {
+      "name": "Common",
+      "commands": {
+        "CardReader.ReadRawData": {
+          "versions": [
+            "1.3",
+            "2.1",
+            "3.0"
+          ]
+        }
+      },
+      "events": {
+        "CardReader.MediaInsertedEvent": {
+          "versions": [
+            "1.3",
+            "2.1",
+            "3.0"
+          ]
+        }
+      },
+      "maximumRequests": 0
+    }
+  ],
+  "common": {
+    "serviceVersion": "1.3.42",
+    "deviceInformation": [
+      {
+        "modelName": "AcmeModel42",
+        "serialNumber": "1.0.12.05",
+        "revisionNumber": "1.2.3",
+        "modelDescription": "Acme Dispenser Model 3",
+        "firmware": [
+          {
+            "firmwareName": "Acme Firmware",
+            "firmwareVersion": "1.0.1.2",
+            "hardwareRevision": "4.3.0.5"
+          }
+        ],
+        "software": [
+          {
+            "softwareName": "Acme Software Name",
+            "softwareVersion": "1.3.0.2"
+          }
+        ]
+      }
+    ],
+    "powerSaveControl": false,
+    "antiFraudModule": false,
+    "endToEndSecurity": {
+      "required": "always",
+      "hardwareSecurityElement": true,
+      "responseSecurityEnabled": "always",
+      "commands": [
+        "CashDispenser.Dispense"
+      ],
+      "commandNonceTimeout": 3600
+    },
+    "persistentDataStore": {
+      "capacity": 1
+    }
+  },
+  "cashAcceptor": {
+    "type": "tellerBill",
+    "maxCashInItems": 1,
+    "shutter": false,
+    "shutterControl": false,
+    "intermediateStacker": 0,
+    "itemsTakenSensor": false,
+    "itemsInsertedSensor": false,
+    "positions": [
+      {
+        "position": "inLeft",
+        "usage": {
+          "in": false,
+          "refuse": false,
+          "rollback": false
+        },
+        "shutterControl": true,
+        "itemsTakenSensor": false,
+        "itemsInsertedSensor": false,
+        "retractAreas": {
+          "retract": false,
+          "reject": false,
+          "transport": false,
+          "stacker": false,
+          "billCassettes": false,
+          "cashIn": false,
+          "itemCassette": false
+        },
+        "presentControl": false,
+        "preparePresent": false
+      }
+    ],
+    "retractAreas": {
+      "retract": false,
+      "transport": false,
+      "stacker": false,
+      "reject": false,
+      "billCassette": false,
+      "cashIn": false,
+      "itemCassette": false
+    },
+    "retractTransportActions": {
+      "present": false,
+      "retract": false,
+      "reject": false,
+      "billCassette": false,
+      "cashIn": false,
+      "itemCassette": false
+    },
+    "retractStackerActions": {
+      "present": false,
+      "retract": false,
+      "reject": false,
+      "billCassette": false,
+      "cashIn": false,
+      "itemCassette": false
+    },
+    "cashInLimit": {
+      "byTotalItems": false,
+      "byAmount": false
+    },
+    "countActions": {
+      "individual": false,
+      "all": false
+    },
+    "retainAction": {
+      "counterfeit": false,
+      "suspect": false,
+      "inked": false
+    }
+  },
+  "cashManagement": {
+    "cashBox": false,
+    "exchangeType": {
+      "byHand": false
+    },
+    "itemInfoTypes": {
+      "serialNumber": false,
+      "signature": false,
+      "image": false
+    },
+    "classificationList": false,
+    "classifications": {
+      "unrecognized": true,
+      "counterfeit": false,
+      "suspect": false,
+      "inked": false,
+      "fit": true,
+      "unfit": false
+    }
+  }
+}

@@ -14,7 +14,8 @@
 #include "../../../core/Logger/ILogger.hpp"
 
 #include "../../../core/CashManagement/Commands/GetBankNoteTypesCommand.hpp"
-#include "../../../core/CashManagement/Completions/GetBankNoteTypesCompletion.hpp"
+#include "../../../core/CashManagement/Completions/GetBankNoteTypesCompletion/GetBankNoteTypesCompletion.hpp"
+#include "../../../core/CashManagement/Completions/GetBankNoteTypesCompletion/GetBankNoteTypesCompletionV2.hpp"
 
 #include "../ICashManagementDevice.hpp"
 #include "../ICashManagementService.hpp"
@@ -39,9 +40,15 @@ namespace XFS4IoTFramework::CashManagement
             std::exception_ptr commandException) override;
 
     private:
+        //struct CommandResult
+        //{
+        //    std::shared_ptr<XFS4IoT::CashManagement::Completions::GetBankNoteTypesCompletionPayloadData> payload;
+        //    XFS4IoT::MessageHeader::CompletionCodeEnum completionCode;
+        //    std::string errorDescription;
+        //};
         struct CommandResult
         {
-            std::shared_ptr<XFS4IoT::CashManagement::Completions::GetBankNoteTypesCompletionPayloadData> payload;
+            std::shared_ptr<XFS4IoT::CashManagement::Completions::GetBankNoteTypesCompletionV2PayloadData> payload;
             XFS4IoT::MessageHeader::CompletionCodeEnum completionCode;
             std::string errorDescription;
         };

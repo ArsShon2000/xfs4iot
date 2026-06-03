@@ -85,6 +85,15 @@ namespace XFS4IoTServer
         /// </summary>
         virtual std::map<std::string, XFS4IoT::MessageTypeInfo> GetMessagesSupported() const = 0;
 
+
+        virtual void SetEventsSupported(
+            const std::map<std::string, XFS4IoT::MessageTypeInfo>& eventsSupported) = 0;
+
+        /// <summary>
+        /// Get the list of supported events
+        /// </summary>
+        virtual std::map<std::string, XFS4IoT::MessageTypeInfo> GetEventsSupported() const = 0;
+
         /// <summary>
         /// Получить io_context для асинхронных операций
         /// </summary>

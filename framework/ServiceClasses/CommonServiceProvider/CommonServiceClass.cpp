@@ -8,7 +8,17 @@
 
 #include "../../core/Contracts.hpp"
 #include "../../core/common/XFSConstants.hpp"
+#include "../../core/Command.hpp"
 #include "../HasFlagHelper.hpp"
+
+#include "../CommonServiceProvider/Handlers/CapabilitiesHandler.hpp"
+#include "../CashManagementServiceProvider/Handlers/ResetHandler.hpp"
+#include "../CashManagementServiceProvider/Handlers/GetBankNoteTypesHandler.hpp"
+#include "../CashAcceptorServiceProvider/Handlers/ConfigureNoteTypesHandler.hpp"
+#include "../CashAcceptorServiceProvider/Handlers/CashInStartHandler.hpp"
+#include "../CashAcceptorServiceProvider/Handlers/CashInHandler.hpp"
+#include "../CommonServiceProvider/Handlers/SetVersionsHandler.hpp"
+#include "../CommonServiceProvider/Handlers/UnsupportedCommandHandler.hpp"
 
 namespace
 {
@@ -22,6 +32,7 @@ namespace
         if (!s) return nullptr;
         return std::shared_ptr<T>(s, reinterpret_cast<T*>(s.get()));
     }
+
 }
 
 namespace XFS4IoTServer
@@ -29,10 +40,12 @@ namespace XFS4IoTServer
     CommonServiceClass::CommonServiceClass(
         std::shared_ptr<IServiceProvider> serviceProvider,
         std::shared_ptr<ILogger> logger,
-        const std::string& serviceName)
+        const std::string& serviceName,
+        std::shared_ptr<XFS4IoT::MessageDecoder> decoder)
         : serviceProvider_(std::move(serviceProvider))
         , logger_(std::move(logger))
         , serviceName_(serviceName)
+        , decoder_(decoder)
     {
         if (!serviceProvider_)
         {
@@ -168,12 +181,100 @@ namespace XFS4IoTServer
     {
         std::map<std::string, XFS4IoT::MessageTypeInfo> supportedServiceMessages;
 
-        const auto frameworkMessages = serviceProvider_->GetMessagesSupported();
+		const std::map<std::string, XFS4IoT::MessageTypeInfo> frameworkMessages = {
+			{
+				"CashManagement.MediaDetectedEvent",
+				XFS4IoT::MessageTypeInfo(
+					XFS4IoT::MessageTypeInfo::MessageTypeEnum::Event,
+					{ "2.0" }
+				)
+			},
+			{
+				"CashAcceptor.InsertItemsEvent",
+				XFS4IoT::MessageTypeInfo(
+					XFS4IoT::MessageTypeInfo::MessageTypeEnum::Event,
+					{ "2.0" }
+				)
+			},
+			{
+				"CashAcceptor.InputRefuseEvent",
+				XFS4IoT::MessageTypeInfo(
+					XFS4IoT::MessageTypeInfo::MessageTypeEnum::Event,
+					{ "2.0" }
+				)
+			},
+			{
+				"CashManagement.ItemsInsertedEvent",
+				XFS4IoT::MessageTypeInfo(
+					XFS4IoT::MessageTypeInfo::MessageTypeEnum::Event,
+					{ "2.0" }
+				)
+			},
+			{
+		        "Common.Capabilities",
+		        XFS4IoT::MessageTypeInfo(
+			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+			        { "1.0" }
+		        )
+	        },
+	        {
+		        "CashManagement.Reset",
+		        XFS4IoT::MessageTypeInfo(
+			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+			        { "1.0" }
+		        )
+	        },
+	        {
+		        "CashManagement.GetBankNoteTypes",
+		        XFS4IoT::MessageTypeInfo(
+			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+			        { "1.0" }
+		        )
+	        },
+	        {
+		        "CashAcceptor.ConfigureNoteTypes",
+		        XFS4IoT::MessageTypeInfo(
+			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+			        { "1.0" }
+		        )
+	        },
+	        {
+		        "CashAcceptor.CashInStart",
+		        XFS4IoT::MessageTypeInfo(
+			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+			        { "1.0" }
+		        )
+	        },
+	        {
+		        "CashAcceptor.CashIn",
+		        XFS4IoT::MessageTypeInfo(
+			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+			        { "1.0" }
+		        )
+	        },
+            {
+                "Common.SetVersions",
+                XFS4IoT::MessageTypeInfo(
+                    XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+                    { "1.0" }
+                )
+            },
+            {
+                "Common.Unsupported",
+                XFS4IoT::MessageTypeInfo(
+                    XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+                    { "1.0" }
+                )
+            }
+		};
 
         if (!commonCapabilities_)
         {
             return supportedServiceMessages;
         }
+
+        auto serviceProvider = std::dynamic_pointer_cast<XFS4IoTServer::ServiceProvider>(serviceProvider_);
+
 
         if (commonCapabilities_->GetCommonInterface())
         {
@@ -181,7 +282,8 @@ namespace XFS4IoTServer
                 supportedServiceMessages,
                 XFS4IoT::Common::InterfaceClass::NameEnum::Common,
                 *commonCapabilities_->GetCommonInterface(),
-                frameworkMessages);
+                frameworkMessages,
+                serviceProvider);
         }
 
         if (commonCapabilities_->GetCashManagementInterface())
@@ -190,7 +292,8 @@ namespace XFS4IoTServer
                 supportedServiceMessages,
                 XFS4IoT::Common::InterfaceClass::NameEnum::CashManagement,
                 *commonCapabilities_->GetCashManagementInterface(),
-                frameworkMessages);
+                frameworkMessages,
+                serviceProvider);
         }
 
         if (commonCapabilities_->GetCashAcceptorInterface())
@@ -199,7 +302,8 @@ namespace XFS4IoTServer
                 supportedServiceMessages,
                 XFS4IoT::Common::InterfaceClass::NameEnum::CashAcceptor,
                 *commonCapabilities_->GetCashAcceptorInterface(),
-                frameworkMessages);
+                frameworkMessages,
+                serviceProvider);
         }
 
         // Ниже добавляй остальные интерфейсы по мере появления их C++ классов:
@@ -211,11 +315,21 @@ namespace XFS4IoTServer
         return supportedServiceMessages;
     }
 
+    std::map<std::string, XFS4IoT::MessageTypeInfo> CommonServiceClass::BuildSupportedServiceEvents() const
+    {
+        std::map<std::string, XFS4IoT::MessageTypeInfo> supportedServiceMessages;
+
+        const auto frameworkMessages = serviceProvider_->GetMessagesSupported();
+
+        return std::map<std::string, XFS4IoT::MessageTypeInfo>();
+    }
+
     void CommonServiceClass::AddInterfaceMessages(
         std::map<std::string, XFS4IoT::MessageTypeInfo>& target,
         XFS4IoT::Common::InterfaceClass::NameEnum interfaceName,
         const XFS4IoTFramework::Common::InterfaceInfo& interfaceInfo,
-        const std::map<std::string, XFS4IoT::MessageTypeInfo>& frameworkMessages) const
+        const std::map<std::string, XFS4IoT::MessageTypeInfo>& frameworkMessages,
+        std::shared_ptr<XFS4IoTServer::ServiceProvider> serviceProvider) const
     {
 
         const auto prefix = InterfaceNameToPrefix(interfaceName);
@@ -230,9 +344,99 @@ namespace XFS4IoTServer
                 if (it != frameworkMessages.end() &&
                     it->second.Type == XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command)
                 {
-                    target.emplace(fullName, std::move(it->second));
+                    target.emplace(fullName, it->second);
                 }
             }
+
+
+			RegisterCommand<
+                XFS4IoT::Common::Commands::CapabilitiesCommand,
+                XFS4IoTServer::Common::CapabilitiesHandler
+			>(
+                XFS4IoT::Common::Commands::CapabilitiesCommand::CommandName,
+				{ XFS4IoT::Common::Commands::CapabilitiesCommand::Version, "3.0" },
+				XFS4IoT::XFSConstants::ServiceClass::Common,
+				true,
+				serviceProvider
+			);
+
+            RegisterCommand<
+                XFS4IoT::Common::Commands::SetVersionsCommand,
+                XFS4IoTFramework::Common::SetVersionsHandler
+            >(
+                XFS4IoT::Common::Commands::SetVersionsCommand::CommandName,
+                { XFS4IoT::Common::Commands::SetVersionsCommand::Version, "3.0" },
+                XFS4IoT::XFSConstants::ServiceClass::Common,
+                true,
+                serviceProvider
+            );
+
+            RegisterCommand<
+                XFS4IoT::CashManagement::Commands::ResetCommand,
+                XFS4IoTFramework::CashManagement::ResetHandler
+            >(
+                XFS4IoT::CashManagement::Commands::ResetCommand::CommandName,
+                { XFS4IoT::CashManagement::Commands::ResetCommand::Version, "3.0" },
+                XFS4IoT::XFSConstants::ServiceClass::CashManagement,
+                true,
+                serviceProvider
+            );
+
+            RegisterCommand<
+                XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand,
+                XFS4IoTFramework::CashAcceptor::ConfigureNoteTypesHandler
+            >(
+                XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::CommandName,
+                { XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::Version, "3.0" },
+                XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
+                true,
+                serviceProvider
+            );
+
+            RegisterCommand<
+                XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand,
+                XFS4IoTFramework::CashManagement::GetBankNoteTypesHandler
+            >(
+                XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::CommandName,
+                { XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::Version, "3.0" },
+                XFS4IoT::XFSConstants::ServiceClass::CashManagement,
+                true,
+                serviceProvider
+            );
+
+            RegisterCommand<
+                XFS4IoT::Common::Commands::UnsupportedCommand,
+                XFS4IoTFramework::Common::UnsupportedCommandHandler
+            >(
+                "UnsupportedCommand",
+                { "1.0" },
+                XFS4IoT::XFSConstants::ServiceClass::Common,
+                true,
+                serviceProvider
+            );
+
+            RegisterCommand<
+                XFS4IoT::CashAcceptor::Commands::CashInStartCommand,
+                XFS4IoTFramework::CashAcceptor::CashInStartHandler
+            >(
+                XFS4IoT::CashAcceptor::Commands::CashInStartCommand::CommandName,
+                { XFS4IoT::CashAcceptor::Commands::CashInStartCommand::Version },
+                XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
+                true,
+                serviceProvider
+            );
+
+            RegisterCommand<
+                XFS4IoT::CashAcceptor::Commands::CashInCommand,
+                XFS4IoTFramework::CashAcceptor::CashInHandler
+            >(
+                XFS4IoT::CashAcceptor::Commands::CashInCommand::CommandName,
+                { XFS4IoT::CashAcceptor::Commands::CashInCommand::Version, "1.0"},
+                XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
+                true,
+                serviceProvider
+            );
+
         }
 
         const auto eventNames = interfaceInfo.GetEventNames();
@@ -245,10 +449,25 @@ namespace XFS4IoTServer
                 if (it != frameworkMessages.end() &&
                     it->second.Type == XFS4IoT::MessageTypeInfo::MessageTypeEnum::Event)
                 {
-                    target.emplace(fullName, std::move(it->second));
+                    target.emplace(fullName, it->second);
                 }
             }
         }
+    }
+
+    template<typename MessageType, typename HandlerType>
+    void CommonServiceClass::RegisterCommand(
+        const std::string& name
+        , std::vector<std::string> versions
+        , XFS4IoT::XFSConstants::ServiceClass serviceClass
+        , bool isAsync
+        , std::shared_ptr<XFS4IoTServer::ServiceProvider> serviceProvider) const
+    {
+        decoder_->RegisterMessageType<MessageType>(name, versions);
+
+        serviceProvider->RegisterHandler<MessageType, HandlerType>(
+            serviceClass,
+            isAsync);
     }
 
     std::string CommonServiceClass::InterfaceNameToPrefix(

@@ -61,6 +61,13 @@ namespace XFS4IoTServer
 
         std::map<std::string, XFS4IoT::MessageTypeInfo> GetMessagesSupported() const override;
 
+        void SetEventsSupported(
+            const std::map<std::string, XFS4IoT::MessageTypeInfo>& eventsSupported) override {}
+
+        std::map<std::string, XFS4IoT::MessageTypeInfo> GetEventsSupported() const override {
+			return {};
+        }
+
         // IServiceProvider implementation
         std::string GetName() const override { return name_; }
         std::string GetUri() const override { return uri_; }

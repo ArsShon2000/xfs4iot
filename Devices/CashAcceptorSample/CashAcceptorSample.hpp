@@ -41,12 +41,82 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 {
     class EscrowManager;
 
+    class NotesInhibitManager;
+
     using StateMachine = XfsCommon::StateMachine< FS365::HW::Dors::DorsHW::POLL_RES >;
 
     inline constexpr std::chrono::milliseconds POLLING_INTERVAL{ 100 }; // интервал между опросами устройства, по спецификации - 100мс
 
     inline constexpr std::chrono::milliseconds OPERATION_INTERVAL{ 5000 }; // время, необходимое на завершение операций Stacking, Returning, Accepting, Initialize
 
+    // RAII Класс для управления подписками на события машины состояний
+    class SubscriptionGuard {
+    public:
+        SubscriptionGuard(StateMachine& sm) : _sm(sm) {}
+
+        // Запрещаем копирование, но разрешаем перемещение
+        SubscriptionGuard(const SubscriptionGuard&) = delete;
+        SubscriptionGuard& operator=(const SubscriptionGuard&) = delete;
+        SubscriptionGuard(SubscriptionGuard&& other) noexcept
+            : _sm(other._sm),
+            _ids(std::move(other._ids)),
+            _active(other._active) {
+            other._active = false;
+        }
+
+        SubscriptionGuard& operator=(SubscriptionGuard&& other) noexcept {
+            if (this != &other) {
+                reset();
+                _ids = std::move(other._ids);
+                _active = other._active;
+                other._active = false;
+            }
+            return *this;
+        }
+
+        ~SubscriptionGuard() { reset(); }
+
+        // Добавляем ID подписки (возвращаем себя для chain-style)
+        SubscriptionGuard& add(StateMachine::SubscriptionId_t id) {
+            _ids.push_back(id);
+            return *this;
+        }
+
+        // Снимает все подписки
+        void reset() {
+            //std::cout << std::format("Завершилась подписка класса ------------------- {} -------------------", className) << std::endl;
+            if (_active) {
+                for (auto id : _ids)
+                    _sm.Unsubscribe(id);
+                _active = false;
+            }
+        }
+
+        std::string className = "";
+
+    private:
+        StateMachine& _sm;
+        std::vector<StateMachine::SubscriptionId_t> _ids;
+        bool _active{ true };
+    };
+
+    // RAII Класс для поднятия уровня в одиночку (потока)
+    class ThreadPriorityGuard {
+    public:
+        ThreadPriorityGuard(int newPriority = THREAD_PRIORITY_TIME_CRITICAL) {
+            m_hThread = ::GetCurrentThread();
+            m_oldPriority = ::GetThreadPriority(m_hThread);
+            ::SetThreadPriority(m_hThread, newPriority);
+        }
+
+        ~ThreadPriorityGuard() {
+            ::SetThreadPriority(m_hThread, m_oldPriority);
+        }
+
+    private:
+        HANDLE m_hThread;
+        int m_oldPriority;
+    };
 
 
     //using namespace XFS4IoT;
@@ -103,6 +173,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         /// Номинал обрабатываемой банкноты
         uint16_t m_usCurrentNoteID;
 
+        /// Флаг: банкноты предъявлены и пока не забраны
+        bool m_bNotesArePresented;
         // ============================================================================
         // CashAcceptor Interface
         // ============================================================================
@@ -513,6 +585,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         std::unique_ptr<XFS4IoTSP::CashAcceptor::Sample::EscrowManager> escrowManager_;
 
+        std::unique_ptr<XFS4IoTSP::CashAcceptor::Sample::NotesInhibitManager> m_pNotesInhibitManager_;
+
     protected:
         /// Поток опроса устройства
         std::unique_ptr<std::jthread> m_pollingThread;
@@ -608,6 +682,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         
         std::weak_ptr<StateMachine::BlockedWaitTermination> m_p_async_reset_terminator; /**< Токен отмены ожидания */
         
+
     };
 
 } 

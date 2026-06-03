@@ -38,14 +38,23 @@ namespace XFS4IoTFramework::Common
                 PowerSaveControl,
                 SetTransactionState,
                 SetVersions,
-                Cancel
+                Cancel,
+				Reset,
+                GetBankNoteTypes,
+                ConfigureNoteTypes,
+                CashInStart,
+                CashIn,
+                UnsupportedCommand
             };
 
             enum class EventEnum
             {
                 ErrorEvent,
                 NonceClearedEvent,
-                StatusChangedEvent
+                StatusChangedEvent,
+                MediaDetectedEvent,
+                InsertItemsEvent,
+                ItemsInsertedEvent
             };
 
             CommonInterfaceClass(
@@ -102,8 +111,13 @@ namespace XFS4IoTFramework::Common
                 case CommandEnum::SetTransactionState: return "SetTransactionState";
                 case CommandEnum::SetVersions: return "SetVersions";
                 case CommandEnum::Cancel: return "Cancel";
+				case CommandEnum::Reset: return "Reset";
+				case CommandEnum::GetBankNoteTypes: return "GetBankNoteTypes";
+				case CommandEnum::ConfigureNoteTypes: return "ConfigureNoteTypes";
+				case CommandEnum::CashInStart: return "CashInStart";
+				case CommandEnum::CashIn: return "CashIn";
+				default: return "UnsupportedCommand";
                 }
-                throw std::invalid_argument("Unknown CommonInterfaceClass::CommandEnum");
             }
 
             static std::string ToString(EventEnum value)
@@ -113,6 +127,9 @@ namespace XFS4IoTFramework::Common
                 case EventEnum::ErrorEvent: return "ErrorEvent";
                 case EventEnum::NonceClearedEvent: return "NonceClearedEvent";
                 case EventEnum::StatusChangedEvent: return "StatusChangedEvent";
+				case EventEnum::MediaDetectedEvent: return "MediaDetectedEvent";
+				case EventEnum::InsertItemsEvent: return "InsertItemsEvent";
+				case EventEnum::ItemsInsertedEvent: return "ItemsInsertedEvent";
                 }
                 throw std::invalid_argument("Unknown CommonInterfaceClass::EventEnum");
             }

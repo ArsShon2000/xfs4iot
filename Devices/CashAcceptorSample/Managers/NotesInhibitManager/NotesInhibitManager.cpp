@@ -8,7 +8,8 @@ using namespace std::chrono_literals;
 
 namespace XFS4IoTSP::CashAcceptor::Sample {
 
-    NotesInhibitManager::NotesInhibitManager(std::shared_ptr<XFS4IoTSP::CashAcceptor::Sample::CashAcceptorSample> device, DWORD dwDelayTimeAcceptanceStop)
+    NotesInhibitManager::NotesInhibitManager(std::shared_ptr<XFS4IoTSP::CashAcceptor::Sample::CashAcceptorSample> device
+        , uint16_t dwDelayTimeAcceptanceStop)
         : device_(device)
         , m_dwDelayTimeAcceptanceStop(std::chrono::milliseconds(dwDelayTimeAcceptanceStop))
         , m_ulNoteIds(0)

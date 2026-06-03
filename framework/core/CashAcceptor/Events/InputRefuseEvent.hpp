@@ -148,7 +148,7 @@ namespace XFS4IoT::CashAcceptor::Events
 
         // Метаданные для регистрации
         static constexpr const char* EventName = "CashAcceptor.InputRefuseEvent";
-        static constexpr const char* Version = "1.0";
+        static constexpr const char* Version = "2.0";
 
     private:
          //Статическая регистрация в реестре сообщений

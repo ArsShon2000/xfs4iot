@@ -75,7 +75,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 	{
 	public:
 		static constexpr const char* CompletionName = "CashAcceptor.CashIn";
-		static constexpr const char* Version = "1.0";
+		static constexpr const char* Version = "2.0";
 		/// <summary>
 		/// Payload data for CashIn completion
 		/// </summary>

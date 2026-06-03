@@ -29,8 +29,7 @@
 namespace XFS4IoTSP::CashAcceptor::Sample
 {
         class CashAcceptorSample;
-        //class StateMachine;
-        using SM = XfsCommon::StateMachine< FS365::HW::Dors::DorsHW::POLL_RES >;
+        //using SM = XfsCommon::StateMachine< FS365::HW::Dors::DorsHW::POLL_RES >;
 
         /**
          * @class NotesInhibitManager
@@ -54,7 +53,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
              * @param pHandler Указатель на обработчик `DorsPSHandler` (класс не владеет указателем).
              * @param dwDelayTimeAcceptanceStop Время задержки (в миллисекундах) перед запрещением приёма.
              */
-            NotesInhibitManager(std::shared_ptr<CashAcceptorSample> device, DWORD dwDelayTimeAcceptanceStop);
+            NotesInhibitManager(std::shared_ptr<CashAcceptorSample> device
+                , uint16_t dwDelayTimeAcceptanceStop = 0);
 
             /**
              * @brief Деструктор — останавливает фоновые операции и пытается выставить inhibit.
@@ -146,10 +146,10 @@ namespace XFS4IoTSP::CashAcceptor::Sample
             std::chrono::milliseconds m_dwDelayTimeAcceptanceStop; /**< Задержка перед запрещением (ms) */
 
             // Асинхронный токен для прерывания BlockedWait
-            std::weak_ptr<SM::BlockedWaitTermination> m_p_async_terminator;
+            std::weak_ptr<XfsCommon::StateMachine< FS365::HW::Dors::DorsHW::POLL_RES >::BlockedWaitTermination> m_p_async_terminator;
 
             // Кеш текущего набора номиналов
-            ULONG m_ulNoteIds{ 0 };              /**< Битовая маска разрешённых note IDs */
+            uint32_t m_ulNoteIds{ 0 };              /**< Битовая маска разрешённых note IDs */
             bool m_bNoteIdsCached{ false };      /**< Флаг, указывающий, что кеш инициализирован */
         };
 

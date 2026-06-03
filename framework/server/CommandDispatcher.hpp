@@ -60,6 +60,7 @@ namespace XFS4IoTServer
 
     public:
         std::map<std::string, XFS4IoT::MessageTypeInfo> m_messagesSupported;
+        std::map<std::string, XFS4IoT::MessageTypeInfo> m_eventsSupported;
 
         // Конструктор по умолчанию (добавлен для устранения ошибки E0291)
         CommandDispatcher()

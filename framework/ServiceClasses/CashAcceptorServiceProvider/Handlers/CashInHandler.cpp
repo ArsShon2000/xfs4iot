@@ -7,6 +7,20 @@
 
 namespace XFS4IoTFramework::CashAcceptor
 {
+    namespace
+    {
+        void AddCashItemCounts(
+            XFS4IoTFramework::Storage::CashItemCountClass& target,
+            const XFS4IoTFramework::Storage::CashItemCountClass& source)
+        {
+            target.SetCounterfeit(target.GetCounterfeit() + source.GetCounterfeit());
+            target.SetFit(target.GetFit() + source.GetFit());
+            target.SetInked(target.GetInked() + source.GetInked());
+            target.SetSuspect(target.GetSuspect() + source.GetSuspect());
+            target.SetUnfit(target.GetUnfit() + source.GetUnfit());
+        }
+    }
+
     using CashInCommand =
         XFS4IoT::CashAcceptor::Commands::CashInCommand;
 
@@ -244,7 +258,7 @@ namespace XFS4IoTFramework::CashAcceptor
 
 		std::shared_ptr<XFS4IoT::CashManagement::StorageCashCountsClass> movement = nullptr; // это для возврата в ответе, не для хранения в статусе, так как это не cumulative, а только за эту операцию
 
-        if (result.itemCounts.has_value())
+        if (result.itemCounts.has_value() || result.unrecognized > 0)
         {
             movement =
                 std::make_shared<XFS4IoT::CashManagement::StorageCashCountsClass>(
@@ -256,8 +270,15 @@ namespace XFS4IoTFramework::CashAcceptor
 
             auto managed = cashManagement_->GetCashInStatusManaged();
             auto managedCounts = managed->GetCashCounts();
+            if (!managedCounts)
+            {
+                managedCounts = std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>();
+                managed->SetCashCounts(managedCounts);
+            }
 
-            for (const auto& [key, itemCount] : *result.itemCounts)
+            managedCounts->SetUnrecognized(managedCounts->GetUnrecognized() + result.unrecognized);
+
+            for (const auto& [key, itemCount] : result.itemCounts.value_or(std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass>{}))
             {
                 itemAcceptedResult.emplace(
                     key,
@@ -273,15 +294,7 @@ namespace XFS4IoTFramework::CashAcceptor
 
                 if (it != managedItemCounts.end())
                 {
-                    auto existing = it->second;
-
-                    existing.SetCounterfeit(existing.GetCounterfeit() + itemCount.GetCounterfeit());
-                    existing.SetFit(existing.GetFit() + itemCount.GetFit());
-                    existing.SetInked(existing.GetInked() + itemCount.GetInked());
-                    existing.SetSuspect(existing.GetSuspect() + itemCount.GetSuspect());
-                    existing.SetUnfit(existing.GetUnfit() + itemCount.GetUnfit());
-
-                    it->second = existing;
+                    AddCashItemCounts(it->second, itemCount);
                 }
                 else
                 {
@@ -308,7 +321,6 @@ namespace XFS4IoTFramework::CashAcceptor
         }
 
         auto managed = cashManagement_->GetCashInStatusManaged();
-        managed->GetCashCounts()->SetUnrecognized(result.unrecognized);
         cashManagement_->StoreCashInStatus();
 
         co_return CommandResult{

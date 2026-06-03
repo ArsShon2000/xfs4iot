@@ -4,26 +4,26 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
-#include "../../Completion.hpp"
-#include "../../common/MessageHeader.hpp"
-#include "../../common/Completions/MessagePayload.hpp"
-#include "../CashManagementSchemas.hpp"
+#include "../../../Completion.hpp"
+#include "../../../common/MessageHeader.hpp"
+#include "../../../common/Completions/MessagePayload.hpp"
+#include "../../CashManagementSchemas.hpp"
 
 namespace XFS4IoT::CashManagement::Completions
 {
 	/// <summary>
 	/// GetBankNoteTypes completion message
-	/// XFS4IoT Version: 1.0
+	/// XFS4IoT Version: 2.0
 	/// </summary>
-	class GetBankNoteTypesCompletionPayloadData final : public XFS4IoT::MessagePayloadBase
+	class GetBankNoteTypesCompletionV2PayloadData final : public XFS4IoT::MessagePayloadBase
 	{
 	public:
 
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		explicit GetBankNoteTypesCompletionPayloadData(
-			std::optional<std::unordered_map<std::string, std::shared_ptr<BankNoteClass>>> items = std::nullopt)
+		explicit GetBankNoteTypesCompletionV2PayloadData(
+			std::optional<std::unordered_map<std::string, std::shared_ptr<XFS4IoT::CashManagement::BankNoteClass>>> items = std::nullopt)
 			: items_(std::move(items))
 		{
 		}
@@ -50,21 +50,21 @@ namespace XFS4IoT::CashManagement::Completions
 		std::optional<std::unordered_map<std::string, std::shared_ptr<BankNoteClass>>> items_;
 	};
 
-	class GetBankNoteTypesCompletion final : public XFS4IoT::Completion<GetBankNoteTypesCompletionPayloadData>
+	class GetBankNoteTypesCompletionV2 final : public XFS4IoT::Completion<GetBankNoteTypesCompletionV2PayloadData>
 	{
 	public:
 		static constexpr const char* CompletionName = "CashManagement.GetBankNoteTypes";
-		static constexpr const char* Version = "1.0";
+		static constexpr const char* Version = "2.0";
 
 		/// <summary>
 		/// Constructor for GetBankNoteTypes completion
 		/// </summary>
-		GetBankNoteTypesCompletion(
+		GetBankNoteTypesCompletionV2(
 			int requestId,
-			std::shared_ptr<GetBankNoteTypesCompletionPayloadData> payload,
+			std::shared_ptr<GetBankNoteTypesCompletionV2PayloadData> payload,
 			MessageHeader::CompletionCodeEnum completionCode,
 			const std::string& errorDescription)
-			: Completion<GetBankNoteTypesCompletionPayloadData>(
+			: Completion<GetBankNoteTypesCompletionV2PayloadData>(
 				CompletionName,
 				Version,
 				requestId,
@@ -78,19 +78,19 @@ namespace XFS4IoT::CashManagement::Completions
 		static bool registered_;
 	};
 
-	inline bool GetBankNoteTypesCompletion::registered_ = []()
+	inline bool GetBankNoteTypesCompletionV2::registered_ = []()
 		{
 			XFS4IoT::MessageBase::RegisterMessage(
-				typeid(GetBankNoteTypesCompletion),
-				GetBankNoteTypesCompletion::CompletionName,
-				GetBankNoteTypesCompletion::Version);
+				typeid(GetBankNoteTypesCompletionV2),
+				GetBankNoteTypesCompletionV2::CompletionName,
+				GetBankNoteTypesCompletionV2::Version);
 			return true;
 		}();
 
 
 	inline void to_json(
 		nlohmann::json& j,
-		const GetBankNoteTypesCompletionPayloadData& p)
+		const GetBankNoteTypesCompletionV2PayloadData& p)
 	{
 		j = nlohmann::json::object();
 

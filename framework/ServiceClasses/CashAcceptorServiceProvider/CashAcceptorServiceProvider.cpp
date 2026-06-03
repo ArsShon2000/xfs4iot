@@ -3,7 +3,6 @@
 #include "CashAcceptorServiceProvider.hpp"
 #include <stdexcept>
 #include "../../server/CommandDispatcher.hpp"
-#include "../../core/common/Commands/CapabilitiesCommand.hpp"
 #include "../CommonServiceProvider/Handlers/CapabilitiesHandler.hpp"
 #include "../CashManagementServiceProvider/Handlers/ResetHandler.hpp"
 #include "../CashManagementServiceProvider/Handlers/GetBankNoteTypesHandler.hpp"
@@ -11,6 +10,7 @@
 #include "Handlers/CashInStartHandler.hpp"
 #include "Handlers/CashInHandler.hpp"
 #include "../CommonServiceProvider/Handlers/SetVersionsHandler.hpp"
+#include "../CommonServiceProvider/Handlers/UnsupportedCommandHandler.hpp"
 
 namespace XFS4IoTServer
 {
@@ -83,15 +83,17 @@ namespace XFS4IoTServer
             "CashAcceptorServiceProvider::Initialize self.get() = {}",
             static_cast<const void*>(self.get())));
 
-        commonService_ = std::make_shared<CommonServiceClass>(self, logger, GetName());
+        // 🔥 ВОТ ЭТО ВАЖНО
+        auto decoder = std::make_shared<XFS4IoT::MessageDecoder>(logger);
+
+        commonService_ = std::make_shared<CommonServiceClass>(self, logger, GetName(), decoder);
         storageService_ = std::make_shared<StorageServiceClass>(
             self, logger, persistentData, XFS4IoTFramework::Storage::StorageTypeEnum::Cash);
         cashManagementService_ = std::make_shared<CashManagementServiceClass>(
             self, logger, persistentData);
         cashAcceptor_ = std::make_shared<CashAcceptorServiceClass>(self, logger);
 
-        // 🔥 ВОТ ЭТО ВАЖНО
-        auto decoder = std::make_shared<XFS4IoT::MessageDecoder>(logger);
+        decoder_ = decoder;
 
         //decoder->RegisterMessageType<XFS4IoT::Common::Commands::CapabilitiesCommand>(
         //    "Common.Capabilities");
@@ -108,131 +110,159 @@ namespace XFS4IoTServer
         //);
 
 
-        SetMessagesSupported({
-            //{
-            //	"Common.Capabilities",
-            //	XFS4IoT::MessageTypeInfo(
-            //		XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
-            //		{ "1.0" }
-            //	)
-            //},
-            {
-                "CashManagement.Reset",
-                XFS4IoT::MessageTypeInfo(
-                    XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
-                    { "1.0" }
-                )
-            },
-            {
-                "CashManagement.GetBankNoteTypes",
-                XFS4IoT::MessageTypeInfo(
-                    XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
-                    { "1.0" }
-                )
-            },
-            {
-                "CashAcceptor.ConfigureNoteTypes",
-                XFS4IoT::MessageTypeInfo(
-                    XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
-                    { "1.0" }
-                )
-            },
-            {
-                "CashAcceptor.CashInStart",
-                XFS4IoT::MessageTypeInfo(
-                    XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
-                    { "1.0" }
-                )
-            },
-            {
-                "CashAcceptor.CashIn",
-                XFS4IoT::MessageTypeInfo(
-                    XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
-                    { "1.0" }
-                )
-            }
-            });
+        //SetMessagesSupported({
+        //    //{
+        //    //	"Common.Capabilities",
+        //    //	XFS4IoT::MessageTypeInfo(
+        //    //		XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+        //    //		{ "1.0" }
+        //    //	)
+        //    //},
+        //    {
+        //        "CashManagement.Reset",
+        //        XFS4IoT::MessageTypeInfo(
+        //            XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+        //            { "1.0" }
+        //        )
+        //    },
+        //    //{
+        //    //    "CashManagement.GetBankNoteTypes",
+        //    //    XFS4IoT::MessageTypeInfo(
+        //    //        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+        //    //        { "1.0" }
+        //    //    )
+        //    //},
+        //    {
+        //        "CashAcceptor.ConfigureNoteTypes",
+        //        XFS4IoT::MessageTypeInfo(
+        //            XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+        //            { "1.0" }
+        //        )
+        //    },
+        //    {
+        //        "CashAcceptor.CashInStart",
+        //        XFS4IoT::MessageTypeInfo(
+        //            XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+        //            { "1.0" }
+        //        )
+        //    },
+        //    {
+        //        "CashAcceptor.CashIn",
+        //        XFS4IoT::MessageTypeInfo(
+        //            XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+        //            { "1.0" }
+        //        )
+        //    }
+        //    });
 
-        RegisterCommand<
-            XFS4IoT::Common::Commands::CapabilitiesCommand,
-            XFS4IoTServer::Common::CapabilitiesHandler
-        >(
-            decoder,
-            XFS4IoT::Common::Commands::CapabilitiesCommand::CommandName,
-            { XFS4IoT::Common::Commands::CapabilitiesCommand::Version, "3.5" },
-            XFS4IoT::XFSConstants::ServiceClass::Common,
-            true
-        );
-
-
-        RegisterCommand<
-            XFS4IoT::Common::Commands::SetVersionsCommand,
-            XFS4IoTFramework::Common::SetVersionsHandler
-        >(
-            decoder,
-            XFS4IoT::Common::Commands::SetVersionsCommand::CommandName,
-            { XFS4IoT::Common::Commands::SetVersionsCommand::Version, "3.0" },
-            XFS4IoT::XFSConstants::ServiceClass::Common,
-            true
-        );
+        //RegisterCommand<
+        //    XFS4IoT::Common::Commands::CapabilitiesCommand,
+        //    XFS4IoTServer::Common::CapabilitiesHandler
+        //>(
+        //    decoder,
+        //    XFS4IoT::Common::Commands::CapabilitiesCommand::CommandName,
+        //    { XFS4IoT::Common::Commands::CapabilitiesCommand::Version, "3.5" },
+        //    XFS4IoT::XFSConstants::ServiceClass::Common,
+        //    true
+        //);
 
 
-        decoder->RegisterMessageType<XFS4IoT::CashManagement::Commands::ResetCommand>(
-            XFS4IoT::CashManagement::Commands::ResetCommand::CommandName,
-            { XFS4IoT::CashManagement::Commands::ResetCommand::Version});
-        RegisterHandler<
-            XFS4IoT::CashManagement::Commands::ResetCommand,
-            XFS4IoTFramework::CashManagement::ResetHandler
-        >(
-            XFS4IoT::XFSConstants::ServiceClass::CashManagement,
-            false
-        );
+        //RegisterCommand<
+        //    XFS4IoT::Common::Commands::SetVersionsCommand,
+        //    XFS4IoTFramework::Common::SetVersionsHandler
+        //>(
+        //    decoder,
+        //    XFS4IoT::Common::Commands::SetVersionsCommand::CommandName,
+        //    { XFS4IoT::Common::Commands::SetVersionsCommand::Version, "3.0" },
+        //    XFS4IoT::XFSConstants::ServiceClass::Common,
+        //    true
+        //);
 
 
-        decoder->RegisterMessageType<XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand>(
-            XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::CommandName,
-            { XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::Version});
-        RegisterHandler<
-            XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand,
-            XFS4IoTFramework::CashAcceptor::ConfigureNoteTypesHandler
-        >(
-            XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
-            false
-        );
+        //decoder->RegisterMessageType<XFS4IoT::CashManagement::Commands::ResetCommand>(
+        //    XFS4IoT::CashManagement::Commands::ResetCommand::CommandName,
+        //    { XFS4IoT::CashManagement::Commands::ResetCommand::Version});
+        //RegisterHandler<
+        //    XFS4IoT::CashManagement::Commands::ResetCommand,
+        //    XFS4IoTFramework::CashManagement::ResetHandler
+        //>(
+        //    XFS4IoT::XFSConstants::ServiceClass::CashManagement,
+        //    false
+        //);
 
 
-        decoder->RegisterMessageType<XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand>(
-            XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::CommandName,
-            { XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::Version});
-        RegisterHandler<
-            XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand,
-            XFS4IoTFramework::CashManagement::GetBankNoteTypesHandler
-        >(
-            XFS4IoT::XFSConstants::ServiceClass::CashManagement,
-            false
-        );
+        //decoder->RegisterMessageType<XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand>(
+        //    XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::CommandName,
+        //    { XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::Version});
+        //RegisterHandler<
+        //    XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand,
+        //    XFS4IoTFramework::CashAcceptor::ConfigureNoteTypesHandler
+        //>(
+        //    XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
+        //    false
+        //);
 
-        decoder->RegisterMessageType<XFS4IoT::CashAcceptor::Commands::CashInStartCommand>(
-            XFS4IoT::CashAcceptor::Commands::CashInStartCommand::CommandName,
-            { XFS4IoT::CashAcceptor::Commands::CashInStartCommand::Version});
-        RegisterHandler<
-            XFS4IoT::CashAcceptor::Commands::CashInStartCommand,
-            XFS4IoTFramework::CashAcceptor::CashInStartHandler
-        >(
-            XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
-            true
-        );
 
-        decoder->RegisterMessageType<XFS4IoT::CashAcceptor::Commands::CashInCommand>(
-            XFS4IoT::CashAcceptor::Commands::CashInCommand::CommandName,
-            { XFS4IoT::CashAcceptor::Commands::CashInCommand::Version});
-        RegisterHandler<
-            XFS4IoT::CashAcceptor::Commands::CashInCommand,
-            XFS4IoTFramework::CashAcceptor::CashInHandler
-        >(
-            XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
-            true
-        );
+        ////decoder->RegisterMessageType<XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand>(
+        ////    XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::CommandName,
+        ////    { XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::Version});
+        ////RegisterHandler<
+        ////    XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand,
+        ////    XFS4IoTFramework::CashManagement::GetBankNoteTypesHandler
+        ////>(
+        ////    XFS4IoT::XFSConstants::ServiceClass::CashManagement,
+        ////    false
+        ////);
+
+
+        //RegisterCommand<
+        //    XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand,
+        //    XFS4IoTFramework::CashManagement::GetBankNoteTypesHandler
+        //>(
+        //    decoder,
+        //    XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::CommandName,
+        //    {
+        //        XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::Version,
+        //        "2.0"
+        //    },
+        //    XFS4IoT::XFSConstants::ServiceClass::CashManagement,
+        //    true
+        //);
+
+        //RegisterCommand<
+        //    XFS4IoT::Common::Commands::UnsupportedCommand,
+        //    XFS4IoTFramework::Common::UnsupportedCommandHandler
+        //>(
+        //    decoder,
+        //    "UnsupportedCommand",
+        //    {
+        //        "1.0"
+        //    },
+        //    XFS4IoT::XFSConstants::ServiceClass::Common,
+        //    true
+        //);
+
+        //decoder->RegisterMessageType<XFS4IoT::CashAcceptor::Commands::CashInStartCommand>(
+        //    XFS4IoT::CashAcceptor::Commands::CashInStartCommand::CommandName,
+        //    { XFS4IoT::CashAcceptor::Commands::CashInStartCommand::Version});
+        //RegisterHandler<
+        //    XFS4IoT::CashAcceptor::Commands::CashInStartCommand,
+        //    XFS4IoTFramework::CashAcceptor::CashInStartHandler
+        //>(
+        //    XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
+        //    true
+        //);
+
+        //decoder->RegisterMessageType<XFS4IoT::CashAcceptor::Commands::CashInCommand>(
+        //    XFS4IoT::CashAcceptor::Commands::CashInCommand::CommandName,
+        //    { XFS4IoT::CashAcceptor::Commands::CashInCommand::Version});
+        //RegisterHandler<
+        //    XFS4IoT::CashAcceptor::Commands::CashInCommand,
+        //    XFS4IoTFramework::CashAcceptor::CashInHandler
+        //>(
+        //    XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
+        //    true
+        //);
 
         logger->trace(std::format(
             "CashAcceptorServiceProvider::Initialize зарегистрирован обработчик для this = {}",
@@ -249,7 +279,7 @@ namespace XFS4IoTServer
 
         // TODO: нужно добавить сюда остальные команды сервиса
 
-        decoder_ = decoder;
+        //decoder_ = decoder;
 
         logger->trace(std::format(
             "CashAcceptorServiceProvider::Initialize() количество зарегистрированных обработчиков count={}",

@@ -1,4 +1,5 @@
 ﻿#include "ClientConnection.hpp"
+#include "IServiceProvider.hpp"
 
 namespace beast = boost::beast;
 namespace websocket = beast::websocket;

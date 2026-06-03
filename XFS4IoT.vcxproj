@@ -130,6 +130,7 @@
     <ClCompile Include="app\XFS4IoT.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\CashAcceptorSample.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashInStart\ExecuteCashInStart.cpp" />
+    <ClCompile Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashIn\ExecuteCashIn.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\Managers\EscrowManager\EscrowManager.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\Managers\NotesInhibitManager\NotesInhibitManager.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\Managers\PowerUpManager\PowerUpManager.cpp" />
@@ -183,6 +184,7 @@
   <ItemGroup>
     <ClInclude Include="Devices\CashAcceptorSample\CashAcceptorSample.hpp" />
     <ClInclude Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashInStart\ExecuteCashInStart.hpp" />
+    <ClInclude Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashIn\ExecuteCashIn.hpp" />
     <ClInclude Include="Devices\CashAcceptorSample\Managers\EscrowManager\EscrowManager.hpp" />
     <ClInclude Include="Devices\CashAcceptorSample\Managers\NotesInhibitManager\NotesInhibitManager.hpp" />
     <ClInclude Include="Devices\CashAcceptorSample\Managers\PowerUpManager\PowerUpManager.hpp" />
@@ -221,7 +223,8 @@
     <ClInclude Include="framework\core\CashManagement\Commands\ResetCommand.hpp" />
     <ClInclude Include="framework\core\CashManagement\Completions\CalibrateCashUnitCompletion.hpp" />
     <ClInclude Include="framework\core\CashManagement\Commands\GetBankNoteTypesCommand.hpp" />
-    <ClInclude Include="framework\core\CashManagement\Completions\GetBankNoteTypesCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\GetBankNoteTypesCompletion\GetBankNoteTypesCompletion.hpp" />
+    <ClInclude Include="framework\core\CashManagement\Completions\GetBankNoteTypesCompletion\GetBankNoteTypesCompletionV2.hpp" />
     <ClInclude Include="framework\core\CashManagement\Completions\GetTellerInfoCompletion.hpp" />
     <ClInclude Include="framework\core\CashManagement\Completions\ResetCompletion.hpp" />
     <ClInclude Include="framework\core\CashManagement\Completions\RetractCompletion.hpp" />
@@ -267,8 +270,11 @@
     <ClInclude Include="framework\core\Storage\Events\StorageErrorEvent.hpp" />
     <ClInclude Include="framework\core\Storage\Events\StorageThresholdEvent.hpp" />
     <ClInclude Include="framework\core\Storage\StorageSchemas.hpp" />
+    <ClInclude Include="framework\core\common\Commands\UnsupportedCommand.hpp" />
+    <ClInclude Include="framework\core\common\Completions\GenericCompletion.hpp" />
     <ClInclude Include="framework\core\Validation.hpp" />
     <ClInclude Include="framework\server\GetServiceHandler.hpp" />
+    <ClInclude Include="framework\server\VersionNegotiationHelper.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceClass.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceProvider.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashAcceptorEvents.hpp" />
@@ -378,6 +384,7 @@
     <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\StorageChangedBase.hpp" />
     <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\StorageServiceClass.hpp" />
     <ClInclude Include="framework\ServiceClasses\StorageServiceProvider\UnitStorageBase.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CommonServiceProvider\Handlers\UnsupportedCommandHandler.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="framework\core\common\CommonSchemas.hpp" />

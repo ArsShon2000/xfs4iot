@@ -1,30 +1,4 @@
-﻿//#pragma once
-//
-//#include <memory>
-//#include "Message.hpp"
-//#include "common/MessageHeader.hpp"
-//
-//namespace XFS4IoT::Commands
-//{
-//    template<typename T>
-//        requires std::is_base_of_v<XFS4IoT::MessagePayloadBase, T>
-//    class Command : public XFS4IoT::Message<T>
-//    {
-//    public:
-//        Command(int requestId, std::shared_ptr<T> payload, int timeout)
-//            : XFS4IoT::Message<T>(
-//                requestId,
-//                XFS4IoT::MessageHeader::TypeEnum::Command,
-//                std::move(payload),
-//                timeout)
-//        {
-//        }
-//
-//        virtual ~Command() = default;
-//    };
-//}
-
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <string>
@@ -51,6 +25,17 @@ namespace XFS4IoT::Commands
                 XFS4IoT::MessageHeader::TypeEnum::Command,
                 std::move(payload),
                 timeout)
+        {
+        }
+
+        Command()
+            : XFS4IoT::Message<T>(
+                "",                                          // name
+                "",                                          // version
+                0,                                           // requestId
+                XFS4IoT::MessageHeader::TypeEnum::Command,   // type
+                nullptr,                                     // shared_ptr<T> = nullptr (не nullopt!)
+                0)                                           // timeout
         {
         }
 

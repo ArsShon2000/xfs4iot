@@ -10,6 +10,7 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/io_context.hpp>
 
+#include "../../core/MessageDecoder.hpp"
 #include "ICommonService.hpp"
 #include "ICommonDevice.hpp"
 #include "../../server/IServiceProvider.hpp"
@@ -55,13 +56,16 @@ namespace XFS4IoTServer
     //    std::string propertyName_;
     //};
 
+
+
     class CommonServiceClass : public  XFS4IoTFramework::Common::ICommonService
     {
     public:
         CommonServiceClass(
             std::shared_ptr<IServiceProvider> serviceProvider,
             std::shared_ptr<ILogger> logger,
-            const std::string& serviceName);
+            const std::string& serviceName,
+            std::shared_ptr<XFS4IoT::MessageDecoder> decoder);
 
         virtual ~CommonServiceClass() = default;
 
@@ -160,12 +164,22 @@ namespace XFS4IoTServer
         void GetStatus();
 
         std::map<std::string, XFS4IoT::MessageTypeInfo> BuildSupportedServiceMessages() const;
+        std::map<std::string, XFS4IoT::MessageTypeInfo> BuildSupportedServiceEvents() const;
 
         void AddInterfaceMessages(
             std::map<std::string, XFS4IoT::MessageTypeInfo>& target,
             XFS4IoT::Common::InterfaceClass::NameEnum interfaceName,
             const XFS4IoTFramework::Common::InterfaceInfo& interfaceInfo,
-            const std::map<std::string, XFS4IoT::MessageTypeInfo>& frameworkMessages) const;
+            const std::map<std::string, XFS4IoT::MessageTypeInfo>& frameworkMessages, 
+            std::shared_ptr<XFS4IoTServer::ServiceProvider> serviceProvider) const;
+
+        template<typename MessageType, typename HandlerType>
+        void RegisterCommand(
+            const std::string& name,
+            std::vector<std::string> versions,
+            XFS4IoT::XFSConstants::ServiceClass serviceClass,
+            bool isAsync,
+            std::shared_ptr<XFS4IoTServer::ServiceProvider> serviceProvider) const;
 
         static std::string InterfaceNameToPrefix(
             XFS4IoT::Common::InterfaceClass::NameEnum interfaceName);
@@ -181,6 +195,7 @@ namespace XFS4IoTServer
         std::shared_ptr<ILogger> logger_;
         std::shared_ptr<XFS4IoTFramework::Common::ICommonDevice> device_;
         std::string serviceName_;
+        std::shared_ptr<XFS4IoT::MessageDecoder> decoder_;
 
         std::shared_ptr<XFS4IoTFramework::Common::CommonCapabilitiesClass> commonCapabilities_;
         std::shared_ptr<XFS4IoTFramework::Common::CashManagementCapabilitiesClass> cashManagementCapabilities_;

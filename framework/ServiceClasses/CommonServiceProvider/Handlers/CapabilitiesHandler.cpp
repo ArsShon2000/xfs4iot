@@ -272,13 +272,17 @@ namespace XFS4IoTServer::Common
                 commonCaps->GetEndToEndSecurity()->GetCommandNonceTimeout());
         }
 
+        std::shared_ptr<XFS4IoT::Common::PersistentDataStoreCapabilityClass> persistentDataStore = 
+            std::make_shared<XFS4IoT::Common::PersistentDataStoreCapabilityClass>(UINT32_MAX);
+
         auto commonCapabilities =
             std::make_shared<XFS4IoT::Common::CapabilityPropertiesClass>(
                 std::string(XFS4IoT::XFSConstants::ServiceVersion),
                 deviceInformation,
                 commonCaps->GetPowerSaveControl(),
                 commonCaps->GetAntiFraudModule(),
-                endToEndSecurity);
+                endToEndSecurity,
+                persistentDataStore);
 
         std::shared_ptr<XFS4IoT::CashManagement::CapabilitiesClass> cashManagement = nullptr;
         auto cashMgmtCaps = common_->GetCashManagementCapabilities();

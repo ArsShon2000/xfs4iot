@@ -10,6 +10,7 @@
 #include "IMessageDecoder.hpp"
 #include <iostream>
 #include "./Logger/ILogger.hpp"
+#include "common/Commands/UnsupportedCommand.hpp"
 
 namespace XFS4IoT
 {
@@ -66,7 +67,7 @@ namespace XFS4IoT
                 auto it = factories_.find({ messageType, version });
                 if (it == factories_.end()) {
                     logger_->warn(std::format("Команда или данная версия команды не поддерживается!"));
-                    return nullptr;
+                    return XFS4IoT::Common::Commands::UnsupportedCommand::FromJson(j);
                 }
 
                 logger_->trace(

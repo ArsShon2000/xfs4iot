@@ -22,7 +22,7 @@
 
 namespace XFS4IoTFramework::Common
 {
-    class SetVersionsHandler final : public XFS4IoTServer::ICommandHandler
+    class SetVersionsHandler final : public ICommandHandler
     {
     public:
         SetVersionsHandler(

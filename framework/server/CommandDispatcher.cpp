@@ -68,27 +68,6 @@ namespace XFS4IoTServer
                     command->Header().Name()));
             }
 
-            // Проверка, поддерживается ли команда и её версия сервисом
-            const auto& cmdName = command->Header().Name();
-            const auto& cmdVersion = command->Header().Version();
-
-            auto itSupported = m_messagesSupported.find(cmdName);
-            if (itSupported == m_messagesSupported.end()) {
-                auto errorMsg = std::format("{} Команда не поддерживается сервисом.", cmdName);
-                co_await handler->HandleError(command,
-                    std::make_exception_ptr(std::runtime_error(errorMsg)));
-                co_return;
-            }
-
-            const auto& supportedInfo = itSupported->second;
-            if (std::ranges::find(supportedInfo.Versions, cmdVersion) == supportedInfo.Versions.end()) {
-                auto errorMsg = std::format("{} Версия команды ({}) не поддерживается сервисом",
-                    cmdName, cmdVersion);
-                co_await handler->HandleError(command,
-                    std::make_exception_ptr(std::runtime_error(errorMsg)));
-                co_return;
-            }
-
 			// Отправка подтверждения (ack) клиенту о получении команды
             auto ack = std::make_shared<XFS4IoT::Acknowledge>(
                 command->Header().RequestId().value(),
@@ -138,9 +117,32 @@ namespace XFS4IoTServer
                     });
             }
 
+
             auto [handler, isAsync] = CreateHandler(
                 std::type_index(typeid(*command)),
                 connection);
+
+            // Проверка, поддерживается ли команда и её версия сервисом
+            const auto& cmdName = command->Header().Name();
+            const auto& cmdVersion = command->Header().Version();
+
+            auto itSupported = m_messagesSupported.find(cmdName);
+            if (itSupported == m_messagesSupported.end()) {
+                auto errorMsg = std::format("{} Команда не поддерживается сервисом.", cmdName);
+                co_await handler->HandleError(command,
+                    std::make_exception_ptr(std::runtime_error(errorMsg)));
+                co_return;
+            }
+
+            const auto& supportedInfo = itSupported->second;
+            if (std::ranges::find(supportedInfo.Versions, cmdVersion) == supportedInfo.Versions.end()) {
+                auto errorMsg = std::format("{} Версия команды ({}) не поддерживается сервисом",
+                    cmdName, cmdVersion);
+                co_await handler->HandleError(command,
+                    std::make_exception_ptr(std::runtime_error(errorMsg)));
+                co_return;
+            }
+
 
 			// Если команда поддерживается и является асинхронной, выполняем её немедленно в этом контексте.
             if (isAsync) {
