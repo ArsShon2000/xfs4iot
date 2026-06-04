@@ -51,9 +51,9 @@ add_executable(xfs4iot_cpp_sp
 	Devices/CashAcceptorSample/Managers/EscrowManager/EscrowManager.cpp
 	Devices/CashAcceptorSample/Managers/NotesInhibitManager/NotesInhibitManager.cpp
 	Devices/CashAcceptorSample/Managers/PowerUpManager/PowerUpManager.cpp
-	
+
 	Devices/CashAcceptorSample/ExecuteFunctions/ExecuteCashInStart/ExecuteCashInStart.cpp
-	#Devices/CashAcceptorSample/ExecuteFunctions/ExecuteCashIn/ExecuteCashIn.cpp
+	Devices/CashAcceptorSample/ExecuteFunctions/ExecuteCashIn/ExecuteCashIn.cpp
 
 
 	Devices/HW/SearchDevices/SearchDevices.cpp

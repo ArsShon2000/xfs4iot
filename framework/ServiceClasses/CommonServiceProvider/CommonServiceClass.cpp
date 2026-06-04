@@ -378,7 +378,7 @@ namespace XFS4IoTServer
                 XFS4IoT::CashManagement::Commands::ResetCommand::CommandName,
                 { XFS4IoT::CashManagement::Commands::ResetCommand::Version, "3.0" },
                 XFS4IoT::XFSConstants::ServiceClass::CashManagement,
-                true,
+                false,
                 serviceProvider
             );
 
@@ -389,7 +389,7 @@ namespace XFS4IoTServer
                 XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::CommandName,
                 { XFS4IoT::CashAcceptor::Commands::ConfigureNoteTypesCommand::Version, "3.0" },
                 XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
-                true,
+                false,
                 serviceProvider
             );
 
@@ -422,7 +422,7 @@ namespace XFS4IoTServer
                 XFS4IoT::CashAcceptor::Commands::CashInStartCommand::CommandName,
                 { XFS4IoT::CashAcceptor::Commands::CashInStartCommand::Version },
                 XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
-                true,
+                false,
                 serviceProvider
             );
 
@@ -433,7 +433,7 @@ namespace XFS4IoTServer
                 XFS4IoT::CashAcceptor::Commands::CashInCommand::CommandName,
                 { XFS4IoT::CashAcceptor::Commands::CashInCommand::Version, "1.0"},
                 XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
-                true,
+                false,
                 serviceProvider
             );
 

@@ -196,14 +196,29 @@ bool PersistentDatasHandler::saveToFile(const nlohmann::json& content) const {
 	// 3. Перезаписываем файл
 	{
 		std::lock_guard<std::mutex> lock(m_fileMutex);
-		if (!m_file.is_open()) {
-			throw PersistentDatasHandlerException("File is not open: " + m_filePath);
+		
+		std::ofstream out(
+			m_filePath,
+			std::ios::binary | std::ios::out | std::ios::trunc);
+
+		if (!out.is_open()) {
+			throw PersistentDatasHandlerException(
+				"Failed to open file for writing: " + m_filePath);
 		}
 
-		m_file.seekp(0, std::ios::beg);
-		m_file.write(encrypted.data(), encrypted.size());
-		m_file.flush();
-		m_file.sync();
+		out.write(encrypted.data(), static_cast<std::streamsize>(encrypted.size()));
+
+		if (!out.good()) {
+			throw PersistentDatasHandlerException(
+				"Failed to write file: " + m_filePath);
+		}
+
+		out.flush();
+
+		if (!out.good()) {
+			throw PersistentDatasHandlerException(
+				"Failed to flush file: " + m_filePath);
+		}
 	}
 
 	// 4. Проверяем целостность новой записи

@@ -13,6 +13,7 @@
 #include "./Managers/PowerUpManager/PowerUpManager.hpp"
 #include "./Managers/EscrowManager/EscrowManager.hpp"
 #include "./Managers/NotesInhibitManager/NotesInhibitManager.hpp"
+#include "./ExecuteFunctions/ExecuteCashIn/ExecuteCashIn.hpp"
 #include "../../framework/ServiceClasses/INFO_MODULES/GetInfoStatus/GetInfoStatus.h"
 #include "../../framework/Common/AsciiHexConversions/AsciiHexConversions.h"
 //#include "../../framework/server/CommandDispatcher.hpp"
@@ -458,49 +459,47 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 				m_pDevice->println(std::format("New state ------------------- {}", FS365::HW::Dors::DorsHW::PollResToString(_newState)));
 			}
 
-//
-//
-//				// Для удобства потребителей, фиксируем номинал текущей обрабатываемой банкноты централизованно
-//			{
-//				// 1. Сброс номинала
-//				if (DorsHW::_isRejCode(m_State) ||
-//					DorsHW::POLL_RES::Accepting == m_State ||
-//					DorsHW::POLL_RES::Idling == m_State ||
-//					DorsHW::POLL_RES::UnitDisabled == m_State) {
-//					m_usCurrentNoteID = 0;
-//				}
-//
-//				// 2. Установка номинала
-//				if (m_State ==FS365::HW::Dors::DorsHW::POLL_RES::EscrowPos
-//					|| ((m_State ==FS365::HW::Dors::DorsHW::POLL_RES::RejInhibit)
-//						&& (m_bAdditionalRes != 0xFE)))
-//				{
-//					auto it = m_denominationsPhysicalToLogical.find(m_bAdditionalRes);
-//					if (it != m_denominationsPhysicalToLogical.cend()) {
-//						if (m_State ==FS365::HW::Dors::DorsHW::POLL_RES::RejInhibit)
-//						{
-//							m_usCurrentNoteID = 0;
-//							logger_->trace(std::format("{}() - НОМИНАЛ БАНКНОТЫ РАСПОЗНАН: BYTE2 = {}, НО НЕРАЗРЕШЕНА ДЛЯ ПРИЕМА", __FUNCTION__, m_bAdditionalRes), LOGLEVEL1);
-//							// notify("НОМИНАЛ БАНКНОТЫ НЕ РАСПОЗНАН: BYTE2 =  " + std::to_string(m_bAdditionalRes), 0x00000002);
-//							m_pDevice->println("НОМИНАЛ БАНКНОТЫ НЕ РАСПОЗНАН: BYTE2 = " + std::to_string(m_bAdditionalRes));
-//						}
-//						else {
-//							m_usCurrentNoteID = it->second;
-//							logger_->trace(std::format("{}() - НОМИНАЛ РАСПОЗНАН: БАНКНОТА С ИНДЕКСОМ {}", __FUNCTION__, m_usCurrentNoteID), LOGLEVEL1);
-//							// notify(" РАСПОЗНАННАЯ БАНКНОТА: Id = " + std::to_string(m_usCurrentNoteID), 0x00000002);
-//						}
-//					}
-//				}
-//
-//				//if (m_State ==FS365::HW::Dors::DorsHW::POLL_RES::PowerUp
-//				//    || m_State ==FS365::HW::Dors::DorsHW::POLL_RES::PowerUpWithBillInValidator
-//				//    || m_State ==FS365::HW::Dors::DorsHW::POLL_RES::PowerUpWithBillInStacker)
-//				//{
-//				//    m_pDevice->CassetteHighLevel(false);
-//				//    m_pDevice->Reset();
-//				//    //m_pDevice->states_stack_transfer_enable(true);
-//				//}
-//			}
+
+
+				// Для удобства потребителей, фиксируем номинал текущей обрабатываемой банкноты централизованно
+			{
+				using namespace FS365::HW::Dors;
+				// 1. Сброс номинала
+				if (DorsHW::_isRejCode(m_State) ||
+					DorsHW::POLL_RES::Accepting == m_State ||
+					DorsHW::POLL_RES::Idling == m_State ||
+					DorsHW::POLL_RES::UnitDisabled == m_State) {
+					m_usCurrentNoteID = 0;
+				}
+
+				// 2. Установка номинала
+				if (m_State ==FS365::HW::Dors::DorsHW::POLL_RES::EscrowPos
+					|| ((m_State ==FS365::HW::Dors::DorsHW::POLL_RES::RejInhibit)
+						&& (m_bAdditionalRes != 0xFE)))
+				{
+					std::set<uint16_t> allBanknoteIds;
+					if (cashManagementCapabilities_->GetAllBanknoteIds().size())
+					{
+						allBanknoteIds = cashManagementCapabilities_->GetAllBanknoteIds();
+					}
+					auto it = allBanknoteIds.find(m_bAdditionalRes);
+					//auto it = m_denominationsPhysicalToLogical.find(m_bAdditionalRes);
+					if (it != allBanknoteIds.end()) {
+						if (m_State ==FS365::HW::Dors::DorsHW::POLL_RES::RejInhibit)
+						{
+							m_usCurrentNoteID = 0;
+							logger_->trace(std::format("{}() - НОМИНАЛ БАНКНОТЫ РАСПОЗНАН: BYTE2 = {}, НО НЕРАЗРЕШЕНА ДЛЯ ПРИЕМА", __FUNCTION__, m_bAdditionalRes), LOGLEVEL1);
+							// notify("НОМИНАЛ БАНКНОТЫ НЕ РАСПОЗНАН: BYTE2 =  " + std::to_string(m_bAdditionalRes), 0x00000002);
+							m_pDevice->println("НОМИНАЛ БАНКНОТЫ НЕ РАСПОЗНАН: BYTE2 = " + std::to_string(m_bAdditionalRes));
+						}
+						else {
+							m_usCurrentNoteID = *it;
+							logger_->trace(std::format("{}() - НОМИНАЛ РАСПОЗНАН: БАНКНОТА С ИНДЕКСОМ {}", __FUNCTION__, m_usCurrentNoteID), LOGLEVEL1);
+							// notify(" РАСПОЗНАННАЯ БАНКНОТА: Id = " + std::to_string(m_usCurrentNoteID), 0x00000002);
+						}
+					}
+				}
+			}
 //
 			m_stateMachine.ChangeState(m_State);
 //
@@ -1267,48 +1266,6 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 	{
 		currentCashInItems_.clear();
 
-		auto updateInputPosition = [this]()
-		{
-			auto& positions = cashAcceptorStatus_->GetPositions();
-			auto it = positions.find(XFS4IoTFramework::Common::CashManagementCapabilitiesClass::PositionEnum::InCenter);
-			if (it != positions.end())
-			{
-				it->second = positionStatus_;
-			}
-		};
-
-		auto addCashItemCounts = [](
-			XFS4IoTFramework::Storage::CashItemCountClass& target,
-			const XFS4IoTFramework::Storage::CashItemCountClass& source)
-		{
-			target.SetFit(target.GetFit() + source.GetFit());
-			target.SetUnfit(target.GetUnfit() + source.GetUnfit());
-			target.SetCounterfeit(target.GetCounterfeit() + source.GetCounterfeit());
-			target.SetSuspect(target.GetSuspect() + source.GetSuspect());
-			target.SetInked(target.GetInked() + source.GetInked());
-		};
-
-		auto currentCashItemId = [this]() -> std::string
-		{
-			if (m_usCurrentNoteID != 0)
-			{
-				for (const auto& [itemId, banknote] : allBanknoteIDs_)
-				{
-					if (banknote.GetNoteId() == m_usCurrentNoteID)
-					{
-						return itemId;
-					}
-				}
-			}
-
-			if (!allBanknoteIDs_.empty())
-			{
-				return allBanknoteIDs_.begin()->first;
-			}
-
-			return "typeRUB10";
-		};
-
 		if (cancellation.stop_requested())
 		{
 			co_return XFS4IoTFramework::CashAcceptor::CashInResult(
@@ -1351,66 +1308,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 				std::to_string(static_cast<int>(positionStatus_.GetPositionStatus())));
 		}
 
-		if (positionStatus_.GetPositionStatus() == XFS4IoTFramework::Common::CashManagementStatusClass::PositionStatusEnum::Empty)
-		{
-			// Ждем, пока предметы не будут вставлены в позицию
-			co_await events->InsertItemsEvent();
-
-			// Симулируем время, необходимое для вставки предметов и их идентификации
-			co_await boost::asio::steady_timer(
-				co_await boost::asio::this_coro::executor,
-				2000ms
-			).async_wait(boost::asio::use_awaitable);
-
-			co_await boost::asio::steady_timer(
-				co_await boost::asio::this_coro::executor,
-				100ms
-			).async_wait(boost::asio::use_awaitable);
-
-			if (cancellation.stop_requested())
-			{
-				co_return XFS4IoTFramework::CashAcceptor::CashInResult(
-					XFS4IoT::MessageHeader::CompletionCodeEnum::Canceled,
-					"Операция CashIn отменена во время ожидания внесения предметов.");
-			}
-		}
-
-		// Банкноты вставлены, идентифицированы и классифицированы. Теперь перемещаем их в складское устройство (стекер) и обновляем статус.
-		co_await cashAcceptorService_->ItemsInsertedEvent(
-			XFS4IoTFramework::Common::CashManagementCapabilitiesClass::PositionEnum::InCenter);
-
-		co_await boost::asio::steady_timer(
-			co_await boost::asio::this_coro::executor,
-			100ms
-		).async_wait(boost::asio::use_awaitable);
-
-		currentCashInItems_[currentCashItemId()] = XFS4IoTFramework::Storage::CashItemCountClass(1, 0, 0, 0, 0);
-
-		// Добавляем текущие принятые предметы к общему счетчику принятых предметов
-		for (const auto& [key, value] : currentCashInItems_)
-		{
-			if (acceptedItems_->contains(key))
-			{
-				addCashItemCounts((*acceptedItems_)[key], value);
-			}
-			else
-			{
-				(*acceptedItems_)[key] = value;
-			}
-		}
-
-		// Обновляем статус устройства
-		positionStatus_.SetPositionStatus(XFS4IoTFramework::Common::CashManagementStatusClass::PositionStatusEnum::Empty);
-		positionStatus_.SetTransportStatus(XFS4IoTFramework::Common::CashManagementStatusClass::TransportStatusEnum::Empty);
-		updateInputPosition();
-		cashAcceptorStatus_->SetIntermediateStacker(XFS4IoTFramework::Common::CashAcceptorStatusClass::IntermediateStackerEnum::NotEmpty);
-		cashAcceptorStatus_->SetStackerItems(XFS4IoTFramework::Common::CashAcceptorStatusClass::StackerItemsEnum::NoCustomerAccess);
-
-		co_return XFS4IoTFramework::CashAcceptor::CashInResult(
-			XFS4IoT::MessageHeader::CompletionCodeEnum::Success,
-			currentCashInItems_,
-			std::unordered_map<std::string, std::shared_ptr<XFS4IoTFramework::Storage::CashUnitCountClass>>{}, // empty movement result
-			0); // unrecognized count
+		ExecuteCashIn executor(shared_from_this(), std::move(events), request, cancellation);
+		co_return co_await executor.Execute();
 	}
 
 	//<summary>
