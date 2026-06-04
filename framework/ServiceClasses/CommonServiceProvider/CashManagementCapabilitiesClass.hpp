@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <nlohmann/json.hpp>
 #include "../../core/Persistent/PersistentDatasHandler.hpp"
+#include <set>
 
 namespace XFS4IoTFramework::Common
 {
@@ -281,9 +282,12 @@ namespace XFS4IoTFramework::Common
             , itemInfoTypes_(itemInfoTypes)
             , cashBox_(cashBox)
             , classificationList_(classificationList)
+            , m_lBillTypes(0)
+            , allBanknoteIds({})
             //, allBanknoteItems_(std::move(allBanknoteItems))
         {
             allBanknoteItems_ = loadPersistentNotes();
+            SetBillTypes();
         }
 
         // ---------------- GETTERS ----------------
@@ -299,6 +303,7 @@ namespace XFS4IoTFramework::Common
         const std::optional<bool>& GetClassificationList() const noexcept { return classificationList_; }
         const std::optional<std::map<std::string, BanknoteItem>>& GetAllBanknoteItems() const noexcept { return allBanknoteItems_; }
 		const uint32_t GetBillTypes() const noexcept { return m_lBillTypes; }
+		const std::set<uint16_t>& GetAllBanknoteIds() const noexcept { return allBanknoteIds; }
         bool saveBanknotes()
         {
             if (allBanknoteItems_->empty() || !allBanknoteItems_)
@@ -341,11 +346,14 @@ namespace XFS4IoTFramework::Common
         std::optional<std::map<std::string, BanknoteItem>> allBanknoteItems_;
         /// Список купюр, которые распознает купюроприемник (Битовая маска для передачи в устройство)
         uint32_t m_lBillTypes;
+        std::set<uint16_t> allBanknoteIds;
 
         void SetBillTypes() noexcept
         {
+            allBanknoteIds.clear();
             for (const auto&[banknoteType, banknote] : *allBanknoteItems_)
             {
+				allBanknoteIds.insert(banknote.GetNoteId());
                 if (banknote.IsEnabled())
                 {
                     m_lBillTypes |= (1 << banknote.GetNoteId());

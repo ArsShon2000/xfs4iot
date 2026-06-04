@@ -39,6 +39,7 @@
 
 namespace XFS4IoTSP::CashAcceptor::Sample
 {
+    class ExecuteCashIn;
     class EscrowManager;
 
     class NotesInhibitManager;
@@ -133,6 +134,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         public XFS4IoTFramework::Storage::IStorageDevice,
         public std::enable_shared_from_this<CashAcceptorSample>
     {
+        friend class ExecuteCashIn;
         friend class ExecuteCashInStart;
 
 

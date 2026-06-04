@@ -94,7 +94,7 @@ namespace XFS4IoTFramework::CashManagement
     private:
         StatusEnum status_;
         int numOfRefusedItems_;
-        std::shared_ptr<XFS4IoTFramework::Storage::StorageCashCountClass> cashCounts_;
+        std::shared_ptr<сс> cashCounts_;
     };
 
     inline std::string ToString(CashInStatusClass::StatusEnum status)

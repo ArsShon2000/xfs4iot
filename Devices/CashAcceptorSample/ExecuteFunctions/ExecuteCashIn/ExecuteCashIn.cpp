@@ -1,321 +1,442 @@
-﻿//#include "ExecuteCashIn.hpp"
-//#include "../../Managers/NotesInhibitManager/NotesInhibitManager.hpp"
-//#include "../../Managers/PowerUpManager/PowerUpManager.hpp"
-//#include "../../Managers/EscrowManager/EscrowManager.hpp"
-//#include <boost/scope_exit.hpp>
-//
-//using namespace FS365::HW::Dors;
-//
-//
-//
-//namespace XFS4IoTSP::CashAcceptor::Sample
-//{
-//	const StateMachine::EventTo failureStates{ {
-//			DorsHW::POLL_RES::StackMotorFail,
-//			DorsHW::POLL_RES::TransportMotorFail,
-//			DorsHW::POLL_RES::InitialCassetteStatusFail,
-//			DorsHW::POLL_RES::OpticCanalFail,
-//			DorsHW::POLL_RES::MagneticCanalFail,
-//			DorsHW::POLL_RES::StartTrayFailure,
-//			DorsHW::POLL_RES::Group47UnknownFailure,
-//			DorsHW::POLL_RES::PortError
-//		} };
-//
-//    boost::asio::awaitable<XFS4IoTFramework::CashAcceptor::CashInStartResult> ExecuteCashIn::doBasicLogic()
-//    {
-//        ThreadPriorityGuard priorityGuard; // Для поднятия уровни потока (RAII)
-//        m_psHandler->logger_->trace(std::format("{} ------------------- Запуск обработчика CASH_IN -------------------", __FUNCTION__), LOGLEVEL1);
-//
-//        BOOST_SCOPE_EXIT(&m_psHandler) {
-//            m_psHandler->logger_->trace(std::format("{}() ------------------- Завершение обработчика CASH_IN [hResult = {}] -------------------", __FUNCTION__, ToString(XFS4IoT::MessageHeader::CompletionCodeEnum::DeviceNotReady)), LOGLEVEL1);
-//        } BOOST_SCOPE_EXIT_END;
-//
-//        auto result = ValidateProcessingConditions();
-//        if (XFS4IoT::MessageHeader::CompletionCodeEnum::Success != result) {
-//            m_psHandler->logger_->trace(std::format("{}() - Запрос отклонён : {}", __FUNCTION__, ToString(result)), LOGLEVEL1);
-//            return;
-//        }
-//
-//
-//        // Механизм асинхронной отмены ожидания
-//        auto pTerminator = std::make_shared< StateMachine::BlockedWaitTermination >();
-//        m_p_async_terminator = pTerminator;
-//
-//        // Индекс текущей обрабатываемой банкноты
-//        USHORT usProcessedNoteId = 0;
-//
-//
-//        // ANY -> Idling
-//        m_guard.add(m_psHandler->m_stateMachine.Subscribe(
-//            StateMachine::EventTo{ DorsHW::POLL_RES::Idling },
-//            [this](DorsHW::POLL_RES)
-//            {
-//                if (!cashAcceptorService_) {
-//                    return;
-//                }
-//
-//                auto executor = cashAcceptorService_->getIoContext().get_executor();
-//
-//                if (m_psHandler->m_bNotesArePresented)
-//                {
-//                    boost::asio::co_spawn(
-//                        executor,
-//                        cashAcceptorService_->ItemsPresentedEvent(
-//                            XFS4IoTFramework::Common::CashManagementCapabilitiesClass::PositionEnum::OutCenter,
-//                            std::nullopt),
-//                        boost::asio::detached);
-//                }
-//
-//                boost::asio::co_spawn(
-//                    executor,
-//                    cashAcceptorService_->ItemsInsertedEvent(
-//                        XFS4IoTFramework::Common::CashManagementCapabilitiesClass::PositionEnum::InCenter),
-//                    boost::asio::detached);
-//            }
-//        ));
-//
-//        // ANY -> Accepting
-//        m_guard.add(m_psHandler->m_stateMachine.Subscribe(StateMachine::EventTo{ DorsHW::POLL_RES::Accepting },
-//            [&usProcessedNoteId](DorsHW::POLL_RES) {
-//                // Идет вставка новой банкноты, сбрасываем распознанную ранее (если таковая была)
-//                usProcessedNoteId = 0;
-//            })
-//        );
-//
-//        // ANY -> Rejecting (Inhibit)
-//        m_guard.add(m_psHandler->m_stateMachine.Subscribe(StateMachine::EventTo{ DorsHW::POLL_RES::RejInhibit },
-//            [&](DorsHW::POLL_RES) {
-//                // Банкнота отбракована
-//                // DBA: номинал известен
-//                if (m_psHandler->m_bAdditionalRes != 0xFE) {
-//                    // Получаем id банкноты
-//                    for (auto banknoteItem : m_psHandler->GetCashManagementCapabilities()->GetAllBanknoteItems().value())
-//                    {
-//                        if (banknoteItem.second.GetNoteId() == m_psHandler->m_bAdditionalRes) {
-//                            usProcessedNoteId = banknoteItem.second.GetNoteId();
-//                            break;
-//						}
-//                    }
-//                }
-//            })
-//        );
-//
-//        // Rejecting -> BillStacked
-//        bool bProtectionFromPreviousReturned{ false };
-//        m_guard.add(m_psHandler->m_stateMachine.Subscribe(
-//            {
-//                StateMachine::EventFromTo{ DorsHW::GetRejectStates(), DorsHW::POLL_RES::BillStacked },
-//                StateMachine::EventFromTo{ DorsHW::POLL_RES::BillStacked, { { DorsHW::POLL_RES::ValidatorJammed, DorsHW::POLL_RES::DropCassetteFull } } }
-//            },
-//            [&](DorsHW::POLL_RES) {
-//                m_psHandler->logger_->trace(std::format("{}() - Сработала защита от возврата ранее складированной банкноты. Удерживаем банкноту с идентификатором номинала {}", __FUNCTION__, usProcessedNoteId), LOGLEVEL1);
-//                bProtectionFromPreviousReturned = true;
-//            })
-//        );
-//
-//        //ANY -> BillStacked
-//        m_guard.add(m_psHandler->m_stateMachine.Subscribe(StateMachine::EventTo{ DorsHW::POLL_RES::BillStacked },
-//            [](DorsHW::POLL_RES) {
-//            })
-//        );
-//        //
-//
-//             // Initialize -> Returning
-//        bool bReturningAfterReset = false;
-//        m_guard.add(m_psHandler->m_stateMachine.Subscribe(StateMachine::EventFromTo{ DorsHW::POLL_RES::Initialize, DorsHW::POLL_RES::Returning },
-//            [&](DorsHW::POLL_RES) {
-//                // Идет возврат банкноты после выполнения сброса
-//                bReturningAfterReset = true;
-//            })
-//        );
-//
-//
-//
-//        // Включаем приём купюр всех валют и номиналов
-//        if (!m_psHandler->m_pNotesInhibitManager_->AllowAccept()) {
-//            result = XFS4IoT::MessageHeader::CompletionCodeEnum::HardwareError;
-//            return;
-//        }
-//
-//        StateMachine::CEventsSequenceList expectedEvents;
-//        {
-//            // ANY -> ESCROW
-//            expectedEvents.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::EscrowPos, DorsHW::POLL_RES::Holding } } });
-//
-//            // ANY -> FAILURE
-//            expectedEvents.push_back({ StateMachine::EventTo{ failureStates } });
-//
-//            // ANY -> CASSETTE MISSING
-//            expectedEvents.push_back({ StateMachine::EventTo{ DorsHW::POLL_RES::DropCassetteOutOfPosition } });
-//
-//            // ANY -> JAMMED
-//            expectedEvents.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::ValidatorJammed, DorsHW::POLL_RES::DropCassetteJammed } } });
-//
-//            // ANY -> CASSETTE_FULL
-//            expectedEvents.push_back({ StateMachine::EventTo{ DorsHW::POLL_RES::DropCassetteFull } });
-//
-//            // ANY -> BillStacked
-//            expectedEvents.push_back({ StateMachine::EventTo{ DorsHW::POLL_RES::BillStacked } });
-//
-//        }
-//
-//        auto waitResult = m_psHandler->m_stateMachine.BlockedWait(expectedEvents, std::chrono::milliseconds(INFINITE), pTerminator);
-//
-//        switch (waitResult)
-//        {
-//        case StateMachine::BlockedWaitResult::BWR_CANCELLED:
-//        {
-//            // Запросили отмену
-//            if (m_cancellation.stop_requested())
-//                result = XFS4IoT::MessageHeader::CompletionCodeEnum::Canceled;
-//            else
-//                result = XFS4IoT::MessageHeader::CompletionCodeEnum::TimeOut;
-//
-//            // Отключаем прием купюр
-//            m_psHandler->m_pNotesInhibitManager_->InhibitAccept();
-//        } break;
-//        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_0:
-//        {
-//            // ESCROW / HOLDING
-//            XFS4IoTFramework::Storage::StorageCashCountClass cashCounts{ {m_psHandler->m_usCurrentNoteID, 1 } };
-//            m_psHandler->escrowManager_->AddNoteNumberList(cashCounts);
-//
-//            result = cashCounts.AllocateRawXfs(lpWfsResult, &lpWfsResult->lpBuffer);
-//        } break;
-//        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_1:
-//        {
-//            // FAILURE
-//            m_psHandler->logger_->trace(std::format("{}() - АППАРАТНАЯ ОШИБКА. ПРЕРЫВАЕМ CASH-IN ОПЕРАЦИЮ", __FUNCTION__), LOGLEVEL1);
-//
-//            result = XFS4IoT::MessageHeader::CompletionCodeEnum::HardwareError;
-//
-//            // Отключаем прием купюр
-//            m_psHandler->m_pNotesInhibitManager_->InhibitAccept();
-//
-//        } break;
-//        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_2:
-//        {
-//            // CASSETTE MISSING
-//            m_psHandler->logger_->trace(std::format("{}() - КАССЕТА ИЗВЛЕЧЕНА. ПРЕРЫВАЕМ CASH-IN ОПЕРАЦИЮ", __FUNCTION__), LOGLEVEL1);
-//            result = XFS4IoT::MessageHeader::CompletionCodeEnum::CashUnitError;
-//
-//            // + Генерируем событие
-//            m_psHandler->SendCashUnitError(XFS4IoT::MessageHeader::CompletionCodeEnum::CashUnitError);
-//
-//            m_psHandler->m_pNotesInhibitManager_->InhibitAccept();
-//        } break;
-//        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_3:
-//        {
-//            // JAMMED
-//            if (usProcessedNoteId == 0) {
-//                m_psHandler->logger_->trace(std::format("{}() - ЗАМЯТИЕ БАНКНОТЫ. ПРЕРЫВАЕМ CASH-IN ОПЕРАЦИЮ", __FUNCTION__), LOGLEVEL1);
-//            }
-//            else {
-//                m_psHandler->logger_->trace(std::format("{}() - ЗАМЯТИЕ РАСПОЗНАННОЙ БАНКНОТЫ: xfsId = {}. ПРЕРЫВАЕМ CASH-IN ОПЕРАЦИЮ", __FUNCTION__, usProcessedNoteId), LOGLEVEL1);
-//            }
-//            result = XFS4IoT::MessageHeader::CompletionCodeEnum::HardwareError;
-//
-//            if (!bReturningAfterReset) {
-//                // Добавляем в список банкнот текущей транзакции.
-//                // С целью учета замятой банкноты как спорной на уровне прикладного ПО.
-//                CimNoteNumberList noteNumberList{ CimNoteNumber(usProcessedNoteId, 1) };
-//                m_psHandler->m_pEscrowManager->AddNoteNumberList(noteNumberList);
-//
-//                if (bProtectionFromPreviousReturned) {
-//                    // Кроме прочего, мы знаем, что банкнота попала в кассету - добавляем в статистику принятых
-//                    m_psHandler->AddBanknote(usProcessedNoteId);
-//                }
-//            }
-//
-//            m_psHandler->m_pNotesInhibitManager_->InhibitAccept();
-//            //m_psHandler->m_pLedCtrl->LedOff();
-//        } break;
-//        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_4:
-//        {
-//            // CASSETTE_FULL
-//            m_psHandler->logger_->trace(std::format("{}() - Переполнение кассеты. Операция прервана", __FUNCTION__), LOGLEVEL1);
-//            result = XFS4IoT::MessageHeader::CompletionCodeEnum::HardwareError;
-//
-//            // + Генерируем событие 
-//            m_psHandler->SendCashUnitError(WFS_CIM_CASHUNITFULL);
-//
-//            m_psHandler->m_pNotesInhibitManager_->InhibitAccept();
-//
-//            if (bProtectionFromPreviousReturned) {
-//
-//                // Добавляем в список банкнот текущей транзакции.
-//                // С целью учета банкноты как спорной на уровне прикладного ПО.
-//                CimNoteNumberList noteNumberList{ CimNoteNumber(usProcessedNoteId, 1) };
-//                m_psHandler->m_pEscrowManager->AddNoteNumberList(noteNumberList);
-//
-//                // Кроме прочего, мы знаем, что банкнота попала в кассету - добавляем в статистику принятых
-//                m_psHandler->AddBanknote(usProcessedNoteId);
-//            }
-//        } break;
-//        //case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_5:
-//        //{
-//        //    // ANY -> BillStacked
-//        //    CimNoteNumberList noteNumberList{ {m_psHandler->m_usCurrentNoteID, 1 } };
-//        //    m_psHandler->m_pEscrowManager->AddNoteNumberList(noteNumberList);
-//
-//        //    m_psHandler->AddBanknote(m_psHandler->m_usCurrentNoteID);
-//
-//        //    result = noteNumberList.AllocateRawXfs(lpWfsResult, &lpWfsResult->lpBuffer);
-//        //    m_psHandler->m_pNotesInhibitManager_->InhibitAccept();
-//        //    //m_psHandler->m_pLedCtrl->LedOff();
-//        //} break;
-//        default:
-//            break;
-//        }
-//    }
-//
-//    XFS4IoT::MessageHeader::CompletionCodeEnum ExecuteCashIn::ValidateProcessingConditions()
-//    {
-//        if (m_psHandler->m_bSoftwareConfigurationFault) {
-//            m_psHandler->logger_->trace(std::format("{}() - Запрос отклонён: Девайс неправильно сконфигугрирован!", __FUNCTION__), LOGLEVELMSG);
-//            return WFS_ERR_SOFTWARE_ERROR;
-//        }
-//
-//        if (!m_psHandler->m_pDevice->IsDeviceInitialized()) {
-//            m_psHandler->logger_->trace(std::format("{}() - Запрос отклонён: Девайс не инициализирован!", __FUNCTION__), LOGLEVELMSG);
-//            return XFS4IoT::MessageHeader::CompletionCodeEnum::DeviceNotReady;
-//        }
-//
-//        //if (m_psHandler->m_bExchangeInProgress) {
-//        //    m_psHandler->logger_->trace(std::format("{}() - Запрос отклонён: Инкассация в процессе!", __FUNCTION__), LOGLEVELMSG);
-//        //    return WFS_ERR_CIM_EXCHANGEACTIVE;
-//        //}
-//
-//        if (m_psHandler->IsCassetMissing())
-//        {
-//            m_psHandler->logger_->trace(std::format("{}() - Внимание отсутствует кассета", __FUNCTION__), LOGLEVELMSG);
-//            return WFS_ERR_CIM_CASHUNITERROR;
-//        }
-//
-//        // проверка была ли выполнена CASH_IN_START
-//        //if (!m_psHandler->m_pEscrowManager->IsCashInActive()) {
-//        //    m_psHandler->logger_->trace(std::format("{}() - Запрос отклонён: WFS_CMD_CASH_IN_START не подан!", __FUNCTION__), LOGLEVELMSG);
-//        //    return WFS_ERR_CIM_NOCASHINACTIVE;
-//        //}
-//
-//        // операция CASH_IN уже могла быть выполнена
-//        if (WFS_CIM_ISFULL == m_psHandler->m_pEscrowManager->GetIntermediateStackerPartialState()) {
-//            m_psHandler->logger_->trace(std::format("{}() - Запрос отклонён: Промежуточный не пустой!", __FUNCTION__), LOGLEVELMSG);
-//            return WFS_ERR_CIM_TOOMANYITEMS;
-//        }
-//
-//        //// Не запретил ли WFS_CMD_CIM_SET_CASH_IN_LIMIT все банкноты
-//        //if (m_psHandler->m_limits.ulTotalItemsLimit > 0
-//        //    && m_psHandler->m_limits.amountLimit.ulAmount < 5) {
-//        //    return WFS_ERR_CIM_TOOMANYITEMS;
-//        //}
-//
-//        return XFS4IoT::MessageHeader::CompletionCodeEnum::Success;
-//    }
-//
-//    void ExecuteCashIn::SetBit(BYTE n, uint32_t& Val)
-//    {
-//        unsigned long tmp = 1;
-//        Val |= (tmp << n);
-//    }
-//}
+#include "ExecuteCashIn.hpp"
+
+#include "../../Managers/EscrowManager/EscrowManager.hpp"
+#include "../../Managers/NotesInhibitManager/NotesInhibitManager.hpp"
+#include "../../../../framework/ServiceClasses/CashAcceptorServiceProvider/CashAcceptorServiceProvider.hpp"
+
+#include <boost/scope_exit.hpp>
+#include <format>
+#include <thread>
+
+namespace XFS4IoTSP::CashAcceptor::Sample
+{
+    namespace
+    {
+        using DorsHW = FS365::HW::Dors::DorsHW;
+        using CompletionCodeEnum = XFS4IoT::MessageHeader::CompletionCodeEnum;
+        using CashInErrorCodeEnum =
+            XFS4IoT::CashAcceptor::Completions::CashInCompletionPayloadData::ErrorCodeEnum;
+
+        const StateMachine::EventTo hardwareErrorOccurred{
+            {
+                DorsHW::POLL_RES::StackMotorFail,
+                DorsHW::POLL_RES::TransportMotorFail,
+                DorsHW::POLL_RES::InitialCassetteStatusFail,
+                DorsHW::POLL_RES::OpticCanalFail,
+                DorsHW::POLL_RES::MagneticCanalFail,
+                DorsHW::POLL_RES::StartTrayFailure,
+                DorsHW::POLL_RES::Group47UnknownFailure,
+                DorsHW::POLL_RES::PortError
+            }
+        };
+    }
+
+    ExecuteCashIn::ExecuteCashIn(
+        std::shared_ptr<CashAcceptorSample> handler,
+        std::shared_ptr<XFS4IoTFramework::CashAcceptor::CashInCommandEvents> events,
+        const XFS4IoTFramework::CashAcceptor::CashInRequest& request,
+        std::stop_token cancellation)
+        : handler_(std::move(handler))
+        , events_(std::move(events))
+        , request_(request)
+        , cancellation_(cancellation)
+        , guard_(handler_->m_stateMachine)
+    {
+    }
+
+    void ExecuteCashIn::InterruptRequest()
+    {
+        if (auto terminator = asyncTerminator_.lock())
+        {
+            terminator->AsyncCancel();
+        }
+    }
+
+    boost::asio::awaitable<XFS4IoTFramework::CashAcceptor::CashInResult> ExecuteCashIn::Execute()
+    {
+        ThreadPriorityGuard priorityGuard;
+
+        if (handler_->logger_)
+        {
+            handler_->logger_->trace(
+                std::format("{} ------------------- запуск CashAcceptor.CashIn -------------------", __FUNCTION__),
+                LOGLEVEL1);
+        }
+
+        std::optional<CashInErrorCodeEnum> errorCode;
+        std::string errorDescription;
+        auto validation = ValidateProcessingConditions(errorCode, errorDescription);
+        if (validation != CompletionCodeEnum::Success)
+        {
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                validation,
+                errorDescription,
+                errorCode);
+        }
+
+        if (events_)
+        {
+            co_await events_->InsertItemsEvent();
+        }
+
+        if (!handler_->m_pNotesInhibitManager_ || !handler_->m_pNotesInhibitManager_->AllowAccept())
+        {
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::HardwareError,
+                "Не удалось разрешить прием банкнот на устройстве.");
+        }
+
+        auto terminator = std::make_shared<StateMachine::BlockedWaitTermination>();
+        asyncTerminator_ = terminator;
+
+        std::stop_callback cancelCallback(cancellation_, [this]()
+            {
+                InterruptRequest();
+            });
+
+        BOOST_SCOPE_EXIT_ALL(this)
+        {
+            const bool cashInEndedWithItemInEscrow = handler_ && accepted_ &&
+                (handler_->m_State == DorsHW::POLL_RES::EscrowPos ||
+                    handler_->m_State == DorsHW::POLL_RES::Holding);
+
+            if (handler_ && handler_->m_pNotesInhibitManager_ && !cashInEndedWithItemInEscrow)
+            {
+                handler_->m_pNotesInhibitManager_->InhibitAccept();
+            }
+
+            if (handler_ && handler_->logger_)
+            {
+                handler_->logger_->trace(
+                    std::format("{} ------------------- завершение CashAcceptor.CashIn -------------------", __FUNCTION__),
+                    LOGLEVEL1);
+            }
+        };
+
+        SubscribeForDeviceEvents(terminator);
+
+        StateMachine::CEventsSequenceList outcomes;
+        outcomes.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::EscrowPos, DorsHW::POLL_RES::Holding } } });
+        outcomes.push_back({ StateMachine::EventTo{ DorsHW::POLL_RES::BillStacked } });
+        outcomes.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::DropCassetteFull } } });
+        outcomes.push_back({ hardwareErrorOccurred });
+        outcomes.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::DropCassetteOutOfPosition } } });
+        outcomes.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::DropCassetteJammed, DorsHW::POLL_RES::ValidatorJammed } } });
+        outcomes.push_back({ StateMachine::EventTo{ DorsHW::GetRejectStates() } });
+
+        const auto waitResult = handler_->m_stateMachine.BlockedWait(
+            outcomes,
+            CashInTimeout(),
+            terminator);
+
+        if (cancellation_.stop_requested())
+        {
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::Canceled,
+                "Операция CashIn отменена.");
+        }
+
+        switch (waitResult)
+        {
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_0:
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_1:
+            if (!accepted_)
+            {
+                AddAcceptedBanknote(processedNoteId_);
+            }
+            co_return co_await CompleteSuccess();
+
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_2:
+            co_await Refuse(RefusedReasonEnum::CashInUnitFull);
+            co_await SendStorageError(XFS4IoTFramework::Storage::FailureEnum::Full);
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::CommandErrorCode,
+                "Кассета приема заполнена.",
+                CashInErrorCodeEnum::CashUnitError);
+
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_3:
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::HardwareError,
+                "Аппаратная ошибка валидатора.");
+
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_4:
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_5:
+            co_await SendStorageError(XFS4IoTFramework::Storage::FailureEnum::Error);
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::CommandErrorCode,
+                "Ошибка кассеты приема или замятие банкноты.",
+                CashInErrorCodeEnum::CashUnitError);
+
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_6:
+            co_await Refuse(RefusedReasonEnum::InvalidBill);
+            co_return co_await CompleteSuccess();
+
+        case StateMachine::BlockedWaitResult::BWR_TIMEOUT:
+            co_await Refuse(RefusedReasonEnum::NoBillsToDeposit);
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::CommandErrorCode,
+                "За время ожидания банкноты не были внесены.",
+                CashInErrorCodeEnum::NoItems);
+
+        case StateMachine::BlockedWaitResult::BWR_CANCELLED:
+            if (accepted_)
+            {
+                co_return co_await CompleteSuccess();
+            }
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::Canceled,
+                "Операция CashIn прервана.");
+
+        default:
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::HardwareError,
+                "Не удалось дождаться ожидаемого состояния устройства.");
+        }
+    }
+
+    CompletionCodeEnum ExecuteCashIn::ValidateProcessingConditions(
+        std::optional<CashInErrorCodeEnum>& errorCode,
+        std::string& errorDescription) const
+    {
+        if (!handler_ || !handler_->m_pDevice || !handler_->m_pDevice->IsDeviceInitialized())
+        {
+            errorDescription = "Устройство не инициализировано.";
+            return CompletionCodeEnum::HardwareError;
+        }
+
+        if (cancellation_.stop_requested())
+        {
+            errorDescription = "Операция CashIn отменена.";
+            return CompletionCodeEnum::Canceled;
+        }
+
+        if (handler_->IsCassetteMissing())
+        {
+            errorDescription = "Кассета приема отсутствует.";
+            errorCode = CashInErrorCodeEnum::CashUnitError;
+            return CompletionCodeEnum::CommandErrorCode;
+        }
+
+        if (!handler_->escrowManager_ || !handler_->escrowManager_->IsCashInActive())
+        {
+            errorDescription = "Нет активной cash-in транзакции.";
+            errorCode = CashInErrorCodeEnum::NoCashInActive;
+            return CompletionCodeEnum::CommandErrorCode;
+        }
+
+        if (!handler_->IsReadyForCashIn())
+        {
+            errorDescription = "Текущее состояние устройства не позволяет выполнить CashIn.";
+            return CompletionCodeEnum::HardwareError;
+        }
+
+        return CompletionCodeEnum::Success;
+    }
+
+    boost::asio::awaitable<XFS4IoTFramework::CashAcceptor::CashInResult> ExecuteCashIn::CompleteSuccess()
+    {
+        UpdateInputPositionStatus(accepted_ || unrecognized_ > 0);
+
+        if (accepted_ || unrecognized_ > 0)
+        {
+            if (handler_->cashAcceptorService_)
+            {
+                co_await handler_->cashAcceptorService_->ItemsInsertedEvent(
+                    XFS4IoTFramework::Common::CashManagementCapabilitiesClass::PositionEnum::InCenter);
+            }
+        }
+
+        co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+            CompletionCodeEnum::Success,
+            handler_->currentCashInItems_,
+            std::unordered_map<std::string, std::shared_ptr<XFS4IoTFramework::Storage::CashUnitCountClass>>{},
+            unrecognized_);
+    }
+
+    boost::asio::awaitable<void> ExecuteCashIn::Refuse(RefusedReasonEnum reason)
+    {
+        refused_ = true;
+
+        if (handler_->escrowManager_)
+        {
+            handler_->escrowManager_->AddRefusedBanknotes(1);
+        }
+
+        if (events_)
+        {
+            co_await events_->InputRefuseEvent(reason);
+        }
+    }
+
+    boost::asio::awaitable<void> ExecuteCashIn::SendStorageError(XFS4IoTFramework::Storage::FailureEnum failure)
+    {
+        if (events_)
+        {
+            co_await events_->StorageErrorEvent(failure, { "1" });
+        }
+    }
+
+    void ExecuteCashIn::SubscribeForDeviceEvents(std::shared_ptr<StateMachine::BlockedWaitTermination> terminator)
+    {
+        using enum DorsHW::POLL_RES;
+
+        guard_.add(handler_->m_stateMachine.Subscribe(
+            StateMachine::EventTo{ { RejInhibit, EscrowPos, Holding } },
+            [this](DorsHW::POLL_RES)
+            {
+                std::lock_guard lock(stateMutex_);
+                processedNoteId_ = handler_->m_bAdditionalRes == 0xFE
+                    ? 0
+                    : (handler_->m_usCurrentNoteID != 0
+                        ? handler_->m_usCurrentNoteID
+                        : static_cast<uint16_t>(handler_->m_bAdditionalRes));
+            }));
+
+        guard_.add(handler_->m_stateMachine.Subscribe(
+            StateMachine::EventTo{ { EscrowPos, Holding } },
+            [this, terminator](DorsHW::POLL_RES)
+            {
+                {
+                    std::lock_guard lock(stateMutex_);
+                    if (processedNoteId_ == 0 && handler_->m_bAdditionalRes != 0xFE)
+                    {
+                        processedNoteId_ = handler_->m_usCurrentNoteID != 0
+                            ? handler_->m_usCurrentNoteID
+                            : static_cast<uint16_t>(handler_->m_bAdditionalRes);
+                    }
+
+                    if (!accepted_)
+                    {
+                        AddAcceptedBanknote(processedNoteId_);
+                    }
+                }
+
+                terminator->AsyncCancel();
+            }));
+
+        guard_.add(handler_->m_stateMachine.Subscribe(
+            StateMachine::EventTo{ BillStacked },
+            [this, terminator](DorsHW::POLL_RES)
+            {
+                std::lock_guard lock(stateMutex_);
+                if (!accepted_)
+                {
+                    AddAcceptedBanknote(processedNoteId_);
+                }
+                terminator->AsyncCancel();
+            }));
+
+        guard_.add(handler_->m_stateMachine.Subscribe(
+            StateMachine::EventTo{ Accepting },
+            [this](DorsHW::POLL_RES)
+            {
+                std::lock_guard lock(stateMutex_);
+                processedNoteId_ = 0;
+            }));
+    }
+
+    void ExecuteCashIn::AddAcceptedBanknote(uint16_t noteId)
+    {
+        if (accepted_)
+        {
+            return;
+        }
+
+        auto cashItemId = CashItemIdByNoteId(noteId);
+        if (!cashItemId)
+        {
+            AddUnrecognizedBanknote();
+            return;
+        }
+
+        const XFS4IoTFramework::Storage::CashItemCountClass itemCount(1, 0, 0, 0, 0);
+        handler_->currentCashInItems_[*cashItemId] += itemCount;
+        (*handler_->acceptedItems_)[*cashItemId] += itemCount;
+
+        XFS4IoTFramework::Storage::StorageCashCountClass cashCount(0, { { *cashItemId, itemCount } });
+        if (handler_->escrowManager_)
+        {
+            handler_->escrowManager_->AddNoteNumberList(cashCount);
+        }
+
+        accepted_ = true;
+
+        if (handler_->logger_)
+        {
+            handler_->logger_->trace(
+                std::format("{}() - принята банкнота noteId={}, cashItemId={}", __FUNCTION__, noteId, *cashItemId),
+                LOGLEVEL1);
+        }
+    }
+
+    void ExecuteCashIn::AddUnrecognizedBanknote()
+    {
+        ++unrecognized_;
+
+        XFS4IoTFramework::Storage::StorageCashCountClass cashCount(1, {});
+        if (handler_->escrowManager_)
+        {
+            handler_->escrowManager_->AddNoteNumberList(cashCount);
+        }
+
+        accepted_ = true;
+
+        if (handler_->logger_)
+        {
+            handler_->logger_->trace(
+                std::format("{}() - принята нераспознанная банкнота", __FUNCTION__),
+                LOGLEVEL1);
+        }
+    }
+
+    std::optional<std::string> ExecuteCashIn::CashItemIdByNoteId(uint16_t noteId) const
+    {
+        if (noteId == 0)
+        {
+            return std::nullopt;
+        }
+
+        for (const auto& [cashItemId, banknote] : handler_->allBanknoteIDs_)
+        {
+            if (banknote.GetNoteId() == noteId)
+            {
+                return cashItemId;
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    std::chrono::milliseconds ExecuteCashIn::CashInTimeout() const
+    {
+        if (request_.timeout > 0)
+        {
+            return std::chrono::milliseconds(request_.timeout);
+        }
+
+        return std::chrono::minutes(1);
+    }
+
+    void ExecuteCashIn::UpdateInputPositionStatus(bool accepted)
+    {
+        handler_->positionStatus_.SetPositionStatus(
+            XFS4IoTFramework::Common::CashManagementStatusClass::PositionStatusEnum::Empty);
+        handler_->positionStatus_.SetTransportStatus(
+            XFS4IoTFramework::Common::CashManagementStatusClass::TransportStatusEnum::Empty);
+
+        auto& positions = handler_->cashAcceptorStatus_->GetPositions();
+        auto position = positions.find(XFS4IoTFramework::Common::CashManagementCapabilitiesClass::PositionEnum::InCenter);
+        if (position != positions.end())
+        {
+            position->second = handler_->positionStatus_;
+        }
+
+        if (accepted)
+        {
+            handler_->cashAcceptorStatus_->SetIntermediateStacker(
+                XFS4IoTFramework::Common::CashAcceptorStatusClass::IntermediateStackerEnum::NotEmpty);
+            handler_->cashAcceptorStatus_->SetStackerItems(
+                XFS4IoTFramework::Common::CashAcceptorStatusClass::StackerItemsEnum::NoCustomerAccess);
+        }
+    }
+}
