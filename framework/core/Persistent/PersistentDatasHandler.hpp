@@ -246,6 +246,12 @@ public:
     bool setConfiguredNotes(const nlohmann::json& notes);
     nlohmann::json getConfiguredNotes(bool reloadFromFile = false);
 
+    static constexpr const char* CASH_UNIT_NOTES_PATH = "Notes.CashUnit";
+
+    bool setCashUnitNotes(const nlohmann::json& notes);
+    nlohmann::json getCashUnitNotes(bool reloadFromFile = false);
+    bool addCashUnitNotes(const nlohmann::json& notesDelta);
+
 
 
     // ============================================================================
@@ -344,6 +350,7 @@ private:
     uint16_t m_fraudAttemptsCount;     // количество попыток мошенничества
     uint16_t m_manipulatedFlag;                     // флаг манипуляции
     nlohmann::json configuredNotes;
+    nlohmann::json cashUnitNotes_;
 
     static constexpr const char* CONFIGURED_NOTES_PATH = "Notes.ConfiguredNotes";
 

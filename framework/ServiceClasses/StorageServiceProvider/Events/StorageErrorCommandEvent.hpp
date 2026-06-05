@@ -72,7 +72,7 @@ namespace XFS4IoTFramework::Storage
         /// </summary>
         StorageErrorCommandEvent(
             std::shared_ptr<IStorageService> storageService,
-            std::shared_ptr<XFS4IoTFramework::CashManagement::ICashInEndEvents> events);
+            std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEndEvents> events);
 
         /// <summary>
         /// Constructor for CashInRollback events
@@ -163,7 +163,7 @@ namespace XFS4IoTFramework::Storage
 
 #pragma region CashAcceptor
         std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEvents> cashInEvents_;
-        std::shared_ptr<XFS4IoTFramework::CashManagement::ICashInEndEvents> cashInEndEvents_;
+        std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEndEvents> cashInEndEvents_;
         std::shared_ptr<XFS4IoTFramework::CashManagement::ICashInRollbackEvents> cashInRollbackEvents_;
         std::shared_ptr<XFS4IoTFramework::CashManagement::IPreparePresentEvents> preparePresentEvents_;
         std::shared_ptr<XFS4IoTFramework::CashManagement::ICashUnitCountEvents> cashUnitCountEvents_;

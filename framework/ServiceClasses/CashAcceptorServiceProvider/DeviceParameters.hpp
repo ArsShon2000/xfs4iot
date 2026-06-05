@@ -13,7 +13,7 @@
 #include "../../core/CashAcceptor/PreparePresentCompletion.hpp"
 #include "../../core/CashAcceptor/Completions/CashInStartCompletion.hpp"
 #include "../../core/CashAcceptor/Completions/CashInCompletion.hpp"
-#include "../../core/CashAcceptor/CashInEndCompletion.hpp"
+#include "../../core/CashAcceptor/Completions/CashInEndCompletion.hpp"
 #include "../../core/CashAcceptor/CashInRollbackCompletion.hpp"
 #include "../../core/CashAcceptor/Completions/ConfigureNoteTypesCompletion.hpp"
 #include "../../core/CashAcceptor/ConfigureNoteReaderCompletion.hpp"
@@ -170,7 +170,7 @@ namespace XFS4IoTFramework::CashAcceptor
         CashInEndResult(
             XFS4IoT::MessageHeader::CompletionCodeEnum completionCode,
             std::optional<std::string> errorDescription = std::nullopt,
-            std::optional<XFS4IoT::CashAcceptor::Completions::CashInEndPayloadData::ErrorCodeEnum> errorCode = std::nullopt)
+            std::optional<XFS4IoT::CashAcceptor::Completions::CashInEndCompletionPayloadData::ErrorCodeEnum> errorCode = std::nullopt)
             : XFS4IoTServer::DeviceResult(completionCode, errorDescription)
             , errorCode(errorCode)
         {
@@ -178,14 +178,14 @@ namespace XFS4IoTFramework::CashAcceptor
 
         CashInEndResult(
             XFS4IoT::MessageHeader::CompletionCodeEnum completionCode,
-            std::map<std::string, XFS4IoTFramework::Storage::CashUnitCountClass> movementResult)
+            std::unordered_map<std::string, std::shared_ptr<XFS4IoTFramework::Storage::CashUnitCountClass>> movementResult)
             : XFS4IoTServer::DeviceResult(completionCode, std::nullopt)
             , movementResult(std::move(movementResult))
         {
         }
 
-        std::optional<XFS4IoT::CashAcceptor::Completions::CashInEndPayloadData::ErrorCodeEnum> errorCode;
-        std::optional<std::map<std::string, XFS4IoTFramework::Storage::CashUnitCountClass>> movementResult;
+        std::optional<XFS4IoT::CashAcceptor::Completions::CashInEndCompletionPayloadData::ErrorCodeEnum> errorCode;
+        std::optional<std::unordered_map<std::string, std::shared_ptr<XFS4IoTFramework::Storage::CashUnitCountClass>>> movementResult;
     };
 
     // ============================================================================

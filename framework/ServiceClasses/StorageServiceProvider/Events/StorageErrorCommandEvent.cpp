@@ -191,7 +191,7 @@ namespace XFS4IoTFramework::Storage
 
     StorageErrorCommandEvent::StorageErrorCommandEvent(
         std::shared_ptr<IStorageService> storageService,
-        std::shared_ptr<XFS4IoTFramework::CashManagement::ICashInEndEvents> events)
+        std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEndEvents> events)
         : storageService_(nullptr)
         , retractEvents_(nullptr)
         , cashManagementResetEvents_(nullptr)
@@ -214,7 +214,7 @@ namespace XFS4IoTFramework::Storage
         storageService_ = storageService;
 
         XFS4IoTServer::Validation::isNotNull(events, "Передан недопустимый параметр. StorageErrorCommandEvent");
-        XFS4IoTServer::Validation::isA<XFS4IoTFramework::CashManagement::ICashInEndEvents>(
+        XFS4IoTServer::Validation::isA<XFS4IoTFramework::CashAcceptor::ICashInEndEvents>(
             events,
             std::string("Передан недопустимый интерфейс. StorageErrorCommandEvent"));
         cashInEndEvents_ = events;
@@ -516,7 +516,7 @@ namespace XFS4IoTFramework::Storage
         }
         if (cashInEndEvents_)
         {
-            co_await cashInEndEvents_->StorageErrorEvent(*payload);
+            co_await cashInEndEvents_->StorageErrorEvent(payload);
             co_return;
         }
         if (cashInRollbackEvents_)

@@ -417,6 +417,7 @@ std::string PersistentDatasHandler::parsePath(const std::string& path)
 	else if (path == "CashInStatus.UnfitNoteNumberList") return "Список банкнот 4-го уровня, признанных непригодными для использования";
 	else if (path == "FRAUD_ATTEMPTS_COUNT") return "Количество попыток мошенничества";
 	else if (path == "Notes._unrecognized") return "Нераспознанные банкноты";
+	else if (path == "Notes.CashUnit") return "Количество банкнот в cash-in кассете";
 	else if (path == "Notes.ConfiguredNotes") return "Разрешенные азрешенные к приему номиналы (в битовой маске)";
 	else if (path == "Notes.Denoms") return "Виды валют разрешенные для приема";
 	else if (path == "Notes.AllNumOfRefused") return "Количество отбракованных банкнот";
@@ -770,6 +771,103 @@ nlohmann::json PersistentDatasHandler::getConfiguredNotes(bool reloadFromFile)
 
 		configuredNotes = getDefaultConfiguredNotes();
 		return configuredNotes;
+	}
+}
+
+bool PersistentDatasHandler::setCashUnitNotes(const nlohmann::json& notes)
+{
+	try
+	{
+		if (!notes.is_object())
+			return false;
+
+		nlohmann::json normalized = nlohmann::json::object();
+		for (const auto& [noteId, count] : notes.items())
+		{
+			if (!count.is_number_integer() && !count.is_number_unsigned())
+				return false;
+
+			const auto value = count.get<int>();
+			if (value < 0)
+				return false;
+
+			normalized[noteId] = value;
+		}
+
+		update(CASH_UNIT_NOTES_PATH, normalized);
+		cashUnitNotes_ = normalized;
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+nlohmann::json PersistentDatasHandler::getCashUnitNotes(bool reloadFromFile)
+{
+	try
+	{
+		if (!reloadFromFile && !cashUnitNotes_.is_null())
+		{
+			return cashUnitNotes_;
+		}
+
+		nlohmann::json content = read();
+		if (!content.contains("Notes") ||
+			!content["Notes"].is_object() ||
+			!content["Notes"].contains("CashUnit") ||
+			!content["Notes"]["CashUnit"].is_object())
+		{
+			cashUnitNotes_ = nlohmann::json::object();
+			update(CASH_UNIT_NOTES_PATH, cashUnitNotes_);
+			return cashUnitNotes_;
+		}
+
+		cashUnitNotes_ = content["Notes"]["CashUnit"];
+		return cashUnitNotes_;
+	}
+	catch (...)
+	{
+		cashUnitNotes_ = nlohmann::json::object();
+		return cashUnitNotes_;
+	}
+}
+
+bool PersistentDatasHandler::addCashUnitNotes(const nlohmann::json& notesDelta)
+{
+	try
+	{
+		if (!notesDelta.is_object())
+			return false;
+
+		nlohmann::json current = getCashUnitNotes(true);
+		if (!current.is_object())
+		{
+			current = nlohmann::json::object();
+		}
+
+		for (const auto& [noteId, count] : notesDelta.items())
+		{
+			if (!count.is_number_integer() && !count.is_number_unsigned())
+				return false;
+
+			const auto delta = count.get<int>();
+			if (delta < 0)
+				return false;
+
+			const auto oldValue = current.contains(noteId) && current[noteId].is_number_integer()
+				? current[noteId].get<int>()
+				: 0;
+
+			current[noteId] = oldValue + delta;
+		}
+
+		return setCashUnitNotes(current);
+	}
+	catch (...)
+	{
+		return false;
 	}
 }
 

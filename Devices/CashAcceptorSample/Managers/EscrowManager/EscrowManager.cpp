@@ -85,7 +85,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         SaveTransactionStatus();
     }
 
-    void EscrowManager::AddNoteNumberList(XFS4IoTFramework::Storage::StorageCashCountClass& cashUnit)
+    void EscrowManager::AddStorageCashCount(XFS4IoTFramework::Storage::StorageCashCountClass& cashUnit)
     {
         std::lock_guard lock(mutex_);
 		// Суммируем
