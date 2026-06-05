@@ -74,11 +74,11 @@ namespace XFS4IoTFramework::CashManagement
             IsA<XFS4IoTFramework::CashAcceptor::ICashInEvents>(events, std::format("Invalid interface passed in. {}", "ItemInfoAvailableCommandEvent"));
         }
 
-        explicit ItemInfoAvailableCommandEvent(std::shared_ptr<ICashInEndEvents> events)
+        explicit ItemInfoAvailableCommandEvent(std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEndEvents> events)
             : cash_in_end_events_(events)
         {
             IsNotNull(events, std::format("Invalid parameter passed in. {}", "ItemInfoAvailableCommandEvent"));
-            IsA<ICashInEndEvents>(events, std::format("Invalid interface passed in. {}", "ItemInfoAvailableCommandEvent"));
+            IsA<XFS4IoTFramework::CashAcceptor::ICashInEndEvents>(events, std::format("Invalid interface passed in. {}", "ItemInfoAvailableCommandEvent"));
         }
 
         explicit ItemInfoAvailableCommandEvent(std::shared_ptr<ICashInRollbackEvents> events)
@@ -164,7 +164,7 @@ namespace XFS4IoTFramework::CashManagement
             }
             if (cash_in_end_events_)
             {
-                return cash_in_end_events_->InfoAvailableEvent(XFS4IoT::CashManagement::Events::InfoAvailableEventPayloadData{ item_info });
+                return cash_in_end_events_->InfoAvailableEvent(std::make_shared<XFS4IoT::CashManagement::Events::InfoAvailableEventPayloadData>(item_info));
             }
             if (cash_in_rollback_events_)
             {
@@ -198,7 +198,7 @@ namespace XFS4IoTFramework::CashManagement
 
         // CashAcceptor
         std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEvents> cash_in_events_ = nullptr;
-        std::shared_ptr<ICashInEndEvents> cash_in_end_events_ = nullptr;
+        std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEndEvents> cash_in_end_events_ = nullptr;
         std::shared_ptr<ICashInRollbackEvents> cash_in_rollback_events_ = nullptr;
         std::shared_ptr<IPreparePresentEvents> prepare_present_events_ = nullptr;
         std::shared_ptr<ICashUnitCountEvents> cash_unit_count_events_ = nullptr;

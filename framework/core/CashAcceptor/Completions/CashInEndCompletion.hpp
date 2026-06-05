@@ -4,16 +4,16 @@
 #include <optional>
 #include <memory>
 #include <map>
-#include "../common/Completions/MessagePayload.hpp"
-#include "../../core/CashManagement/CashManagementSchemas.hpp"
-#include "../Completion.hpp"
+#include "../../common/Completions/MessagePayload.hpp"
+#include "../../../core/CashManagement/CashManagementSchemas.hpp"
+#include "../../Completion.hpp"
 
 namespace XFS4IoT::CashAcceptor::Completions
 {
 	/// <summary>
 	/// Payload data for CashInEnd completion
 	/// </summary>
-	class CashInEndPayloadData : public XFS4IoT::MessagePayloadBase
+	class CashInEndCompletionPayloadData : public XFS4IoT::MessagePayloadBase
 	{
 	public:
 		enum class ErrorCodeEnum
@@ -26,7 +26,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 			SafeDoorOpen
 		};
 
-		CashInEndPayloadData(
+		CashInEndCompletionPayloadData(
 			std::optional<ErrorCodeEnum> errorCode = std::nullopt,
 			std::optional<std::map<std::string, std::shared_ptr<CashManagement::StorageCashInClass>>> storage = std::nullopt)
 			: errorCode_(errorCode)
@@ -68,7 +68,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 	/// Version: 2.0
 	/// Name: CashAcceptor.CashInEnd
 	/// </summary>
-	class CashInEndCompletion : public XFS4IoT::Completion<CashInEndPayloadData>
+	class CashInEndCompletion : public XFS4IoT::Completion<CashInEndCompletionPayloadData>
 	{
 	public:
 		static constexpr const char* CompletionName = "CashAcceptor.CashInEnd";
@@ -76,10 +76,10 @@ namespace XFS4IoT::CashAcceptor::Completions
 
 		CashInEndCompletion(
 			int requestId,
-			std::shared_ptr<CashInEndPayloadData> payload,
+			std::shared_ptr<CashInEndCompletionPayloadData> payload,
 			MessageHeader::CompletionCodeEnum completionCode,
 			const std::string& errorDescription)
-			: Completion<CashInEndPayloadData>(
+			: Completion<CashInEndCompletionPayloadData>(
 				CompletionName,
 				Version,
 				requestId,
@@ -104,20 +104,20 @@ namespace XFS4IoT::CashAcceptor::Completions
 	/// <summary>
 	/// Helper function to convert ErrorCodeEnum to string
 	/// </summary>
-	inline std::string ToString(CashInEndPayloadData::ErrorCodeEnum code)
+	inline std::string ToString(CashInEndCompletionPayloadData::ErrorCodeEnum code)
 	{
 		switch (code) {
-		case CashInEndPayloadData::ErrorCodeEnum::CashUnitError:
+		case CashInEndCompletionPayloadData::ErrorCodeEnum::CashUnitError:
 			return "cashUnitError";
-		case CashInEndPayloadData::ErrorCodeEnum::NoItems:
+		case CashInEndCompletionPayloadData::ErrorCodeEnum::NoItems:
 			return "noItems";
-		case CashInEndPayloadData::ErrorCodeEnum::ExchangeActive:
+		case CashInEndCompletionPayloadData::ErrorCodeEnum::ExchangeActive:
 			return "exchangeActive";
-		case CashInEndPayloadData::ErrorCodeEnum::NoCashInActive:
+		case CashInEndCompletionPayloadData::ErrorCodeEnum::NoCashInActive:
 			return "noCashInActive";
-		case CashInEndPayloadData::ErrorCodeEnum::PositionNotEmpty:
+		case CashInEndCompletionPayloadData::ErrorCodeEnum::PositionNotEmpty:
 			return "positionNotEmpty";
-		case CashInEndPayloadData::ErrorCodeEnum::SafeDoorOpen:
+		case CashInEndCompletionPayloadData::ErrorCodeEnum::SafeDoorOpen:
 			return "safeDoorOpen";
 		default:
 			return "unknown";
@@ -126,7 +126,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 
 	inline void to_json(
 		nlohmann::json& j,
-		const CashInEndPayloadData& p)
+		const CashInEndCompletionPayloadData& p)
 	{
 		j = nlohmann::json::object();
 

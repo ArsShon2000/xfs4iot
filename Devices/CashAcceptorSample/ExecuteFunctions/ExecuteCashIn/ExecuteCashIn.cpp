@@ -1,4 +1,4 @@
-#include "ExecuteCashIn.hpp"
+﻿#include "ExecuteCashIn.hpp"
 
 #include "../../Managers/EscrowManager/EscrowManager.hpp"
 #include "../../Managers/NotesInhibitManager/NotesInhibitManager.hpp"
@@ -356,7 +356,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         XFS4IoTFramework::Storage::StorageCashCountClass cashCount(0, { { *cashItemId, itemCount } });
         if (handler_->escrowManager_)
         {
-            handler_->escrowManager_->AddNoteNumberList(cashCount);
+            handler_->escrowManager_->AddStorageCashCount(cashCount);
         }
 
         accepted_ = true;
@@ -376,7 +376,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         XFS4IoTFramework::Storage::StorageCashCountClass cashCount(1, {});
         if (handler_->escrowManager_)
         {
-            handler_->escrowManager_->AddNoteNumberList(cashCount);
+            handler_->escrowManager_->AddStorageCashCount(cashCount);
         }
 
         accepted_ = true;

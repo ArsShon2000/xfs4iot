@@ -14,6 +14,7 @@
 #include "../../../core/CashManagement/Events/NoteErrorEvent.hpp"
 #include "../../ServiceInterfaces/CashAcceptor/ICashInEvents.hpp"
 #include "../../ServiceInterfaces/CashAcceptor/IReplenishEvents.hpp"
+#include "../../ServiceInterfaces/CashAcceptor/ICashInEndEvents.hpp"
 
 namespace XFS4IoTFramework::CashManagement
 {
@@ -48,7 +49,7 @@ namespace XFS4IoTFramework::CashManagement
 		{
 		}
 
-		explicit ItemErrorCommandEvents(std::shared_ptr<ICashInEndEvents> events)
+		explicit ItemErrorCommandEvents(std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEndEvents> events)
 			: ItemInfoAvailableCommandEvent(events)
 		{
 		}

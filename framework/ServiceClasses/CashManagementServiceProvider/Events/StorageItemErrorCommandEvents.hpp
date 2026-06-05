@@ -33,7 +33,7 @@ namespace XFS4IoTFramework::CashManagement
         /// </summary>
         StorageItemErrorCommandEvents(
             std::shared_ptr<XFS4IoTFramework::Storage::IStorageService> storage,
-            std::shared_ptr<ICashInEndEvents> events)
+            std::shared_ptr<XFS4IoTFramework::CashAcceptor::ICashInEndEvents> events)
             : ItemErrorCommandEvents(events)
             , storageErrorCommandEvent_(
                 std::make_shared<XFS4IoTFramework::Storage::StorageErrorCommandEvent>(storage, events))

@@ -19,6 +19,7 @@
 #include "../CashAcceptorServiceProvider/Handlers/CashInHandler.hpp"
 #include "../CommonServiceProvider/Handlers/SetVersionsHandler.hpp"
 #include "../CommonServiceProvider/Handlers/UnsupportedCommandHandler.hpp"
+#include <ServiceClasses/CashAcceptorServiceProvider/Handlers/CashInEndHandler/CashInEndHandler.hpp>
 
 namespace
 {
@@ -228,7 +229,7 @@ namespace XFS4IoTServer
 		        "CashManagement.GetBankNoteTypes",
 		        XFS4IoT::MessageTypeInfo(
 			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
-			        { "1.0" }
+			        { "1.0", "2.0" }
 		        )
 	        },
 	        {
@@ -250,6 +251,13 @@ namespace XFS4IoTServer
 		        XFS4IoT::MessageTypeInfo(
 			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
 			        { "1.0" }
+		        )
+	        },
+	        {
+		        "CashAcceptor.CashInEnd",
+		        XFS4IoT::MessageTypeInfo(
+			        XFS4IoT::MessageTypeInfo::MessageTypeEnum::Command,
+			        { "1.0", "2.0" }
 		        )
 	        },
             {
@@ -398,7 +406,7 @@ namespace XFS4IoTServer
                 XFS4IoTFramework::CashManagement::GetBankNoteTypesHandler
             >(
                 XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::CommandName,
-                { XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::Version, "3.0" },
+                { XFS4IoT::CashManagement::Commands::GetBankNoteTypesCommand::Version, "2.0" },
                 XFS4IoT::XFSConstants::ServiceClass::CashManagement,
                 true,
                 serviceProvider
@@ -432,6 +440,17 @@ namespace XFS4IoTServer
             >(
                 XFS4IoT::CashAcceptor::Commands::CashInCommand::CommandName,
                 { XFS4IoT::CashAcceptor::Commands::CashInCommand::Version, "1.0"},
+                XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
+                false,
+                serviceProvider
+            );
+
+            RegisterCommand<
+                XFS4IoT::CashAcceptor::Commands::CashInEndCommand,
+                XFS4IoTFramework::CashAcceptor::CashInEndHandler
+            >(
+                XFS4IoT::CashAcceptor::Commands::CashInEndCommand::CommandName,
+                { XFS4IoT::CashAcceptor::Commands::CashInEndCommand::Version, "1.0"},
                 XFS4IoT::XFSConstants::ServiceClass::CashAcceptor,
                 false,
                 serviceProvider

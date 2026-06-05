@@ -7,15 +7,17 @@
 #include <boost/asio/use_awaitable.hpp>
 //#include <boost/asio/awaitable.hpp>
 #include <chrono>
-#include "../../framework/core/CashAcceptor/CashInEndCompletion.hpp"
+#include "../../framework/core/CashAcceptor/Completions/CashInEndCompletion.hpp"
 #include "../../framework/core/CashAcceptor/CashInRollbackCompletion.hpp"
 #include "../../framework/core/SettingModule/SettingModule.h"
 #include "./Managers/PowerUpManager/PowerUpManager.hpp"
 #include "./Managers/EscrowManager/EscrowManager.hpp"
 #include "./Managers/NotesInhibitManager/NotesInhibitManager.hpp"
 #include "./ExecuteFunctions/ExecuteCashIn/ExecuteCashIn.hpp"
+#include "./ExecuteFunctions/ExecuteCashInEnd/ExecuteCashInEnd.hpp"
 #include "../../framework/ServiceClasses/INFO_MODULES/GetInfoStatus/GetInfoStatus.h"
 #include "../../framework/Common/AsciiHexConversions/AsciiHexConversions.h"
+#include "../../framework/core/Persistent/PersistentDatasHandler.hpp"
 //#include "../../framework/server/CommandDispatcher.hpp"
 
 namespace XFS4IoTSP::CashAcceptor::Sample
@@ -148,15 +150,11 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 		// фактических возможностей устройства, но для демонстрационных целей они жестко закодированы здесь.
 			(XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass(
 				std::vector<XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum>{
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::Capabilities,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::Status,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::Reset,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::SetVersions,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::GetBankNoteTypes,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::ConfigureNoteTypes,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::CashInStart,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::CashIn,
-					XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::UnsupportedCommand
+				XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::Capabilities,
+				XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::Status,
+				XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::SetVersions,
+				XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::Cancel,
+				XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::CommandEnum::UnsupportedCommand
 
 	},
 				std::vector<XFS4IoTFramework::Common::CommonCapabilitiesClass::CommonInterfaceClass::EventEnum>{
@@ -191,6 +189,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 			XFS4IoTFramework::Common::CommonCapabilitiesClass::CashManagementInterfaceClass::CommandEnum::OpenShutter,
 			XFS4IoTFramework::Common::CommonCapabilitiesClass::CashManagementInterfaceClass::CommandEnum::CloseShutter,
 			XFS4IoTFramework::Common::CommonCapabilitiesClass::CashManagementInterfaceClass::CommandEnum::CalibrateCashUnit,
+			XFS4IoTFramework::Common::CommonCapabilitiesClass::CashManagementInterfaceClass::CommandEnum::GetBankNoteTypes,
 			XFS4IoTFramework::Common::CommonCapabilitiesClass::CashManagementInterfaceClass::CommandEnum::Reset,
 			XFS4IoTFramework::Common::CommonCapabilitiesClass::CashManagementInterfaceClass::CommandEnum::GetTellerInfo,
 			XFS4IoTFramework::Common::CommonCapabilitiesClass::CashManagementInterfaceClass::CommandEnum::SetTellerInfo
@@ -296,6 +295,62 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 					nullptr,
 					std::make_shared<XFS4IoTFramework::Storage::StorageCashInCountClass>(),
 					0); // общее количество купюр в кассете
+
+			{
+				const auto cashUnitNotes = PersistentDatasHandler::GetInstance()->getCashUnitNotes(true);
+				std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass> depositedItems;
+				int depositedTotal = 0;
+
+				if (cashUnitNotes.is_object())
+				{
+					for (const auto& [noteIdText, countJson] : cashUnitNotes.items())
+					{
+						if (!countJson.is_number_integer() && !countJson.is_number_unsigned())
+						{
+							continue;
+						}
+
+						int noteId = 0;
+						try
+						{
+							noteId = std::stoi(noteIdText);
+						}
+						catch (...)
+						{
+							continue;
+						}
+
+						const int count = countJson.get<int>();
+						if (count <= 0)
+						{
+							continue;
+						}
+
+						for (const auto& [cashItemId, banknote] : allBanknoteIDs_)
+						{
+							if (banknote.GetNoteId() == noteId)
+							{
+								depositedItems[cashItemId] +=
+									XFS4IoTFramework::Storage::CashItemCountClass(count, 0, 0, 0, 0);
+								depositedTotal += count;
+								break;
+							}
+						}
+					}
+				}
+
+				if (depositedTotal > 0)
+				{
+					auto cashInCount = std::make_shared<XFS4IoTFramework::Storage::StorageCashInCountClass>();
+					cashInCount->SetDeposited(
+						std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>(
+							0,
+							depositedItems));
+
+					storageInfo.unitCount_.SetStorageCashInCount(cashInCount);
+					storageInfo.unitCount_.SetCount(depositedTotal);
+				}
+			}
 
 			// пример:
 			// storageInfo.unitCount_.GetCashItemCount()->SetCount(0);
@@ -1321,51 +1376,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 		std::shared_ptr<XFS4IoTFramework::CashAcceptor::CashInEndCommandEvents> events,
 		std::stop_token cancellation)
 	{
-		if (positionStatus_.GetPositionStatus() != XFS4IoTFramework::Common::CashManagementStatusClass::PositionStatusEnum::Empty)
-		{
-			co_return XFS4IoTFramework::CashAcceptor::CashInEndResult(
-				XFS4IoT::MessageHeader::CompletionCodeEnum::CommandErrorCode,
-				"Предметы на позиции.",
-				XFS4IoT::CashAcceptor::Completions::CashInEndPayloadData::ErrorCodeEnum::PositionNotEmpty);
-		}
-
-		if (cashAcceptorStatus_->GetIntermediateStacker() == XFS4IoTFramework::Common::CashAcceptorStatusClass::IntermediateStackerEnum::Empty)
-		{
-			cashAcceptorStatus_->SetStackerItems(XFS4IoTFramework::Common::CashAcceptorStatusClass::StackerItemsEnum::NoItems);
-			co_return XFS4IoTFramework::CashAcceptor::CashInEndResult(
-				XFS4IoT::MessageHeader::CompletionCodeEnum::CommandErrorCode,
-				"Наличные не принимаются.",
-				XFS4IoT::CashAcceptor::Completions::CashInEndPayloadData::ErrorCodeEnum::NoItems);
-		}
-
-		//Simulate moving items from stacker to storage
-		co_await boost::asio::steady_timer(
-			co_await boost::asio::this_coro::executor,
-			1000ms
-		).async_wait(boost::asio::use_awaitable);
-
-		//Build cash movement result
-		std::map<std::string, XFS4IoTFramework::Storage::CashUnitCountClass> cashMovement;
-
-		auto cashInCount = std::make_shared<XFS4IoTFramework::Storage::StorageCashInCountClass>();
-		cashInCount->SetDeposited(std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>(0, *acceptedItems_));
-
-		cashMovement["unit3"] = XFS4IoTFramework::Storage::CashUnitCountClass(
-			nullptr, // StorageCashOutCount
-			cashInCount,
-			cashInCount->GetDeposited()->GetTotal());
-
-		//Clear accepted items
-		acceptedItems_->clear();
-
-		//Update status
-		cashAcceptorStatus_->SetIntermediateStacker(XFS4IoTFramework::Common::CashAcceptorStatusClass::IntermediateStackerEnum::Empty);
-		cashAcceptorStatus_->SetStackerItems(XFS4IoTFramework::Common::CashAcceptorStatusClass::StackerItemsEnum::CustomerAccess);
-		cashAcceptorStatus_->SetStackerItems(XFS4IoTFramework::Common::CashAcceptorStatusClass::StackerItemsEnum::NoItems);
-
-		co_return XFS4IoTFramework::CashAcceptor::CashInEndResult(
-			XFS4IoT::MessageHeader::CompletionCodeEnum::Success,
-			cashMovement);
+		ExecuteCashInEnd executor(shared_from_this(), std::move(events), cancellation);
+		co_return co_await executor.Execute();
 	}
 
 	//<summary>

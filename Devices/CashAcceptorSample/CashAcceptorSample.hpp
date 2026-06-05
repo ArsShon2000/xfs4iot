@@ -40,6 +40,7 @@
 namespace XFS4IoTSP::CashAcceptor::Sample
 {
     class ExecuteCashIn;
+    class ExecuteCashInEnd;
     class EscrowManager;
 
     class NotesInhibitManager;
@@ -135,6 +136,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         public std::enable_shared_from_this<CashAcceptorSample>
     {
         friend class ExecuteCashIn;
+        friend class ExecuteCashInEnd;
         friend class ExecuteCashInStart;
 
 

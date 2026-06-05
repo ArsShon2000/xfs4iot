@@ -129,6 +129,7 @@
   <ItemGroup>
     <ClCompile Include="app\XFS4IoT.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\CashAcceptorSample.cpp" />
+    <ClCompile Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashInEnd\ExecuteCashInEnd.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashInStart\ExecuteCashInStart.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashIn\ExecuteCashIn.cpp" />
     <ClCompile Include="Devices\CashAcceptorSample\Managers\EscrowManager\EscrowManager.cpp" />
@@ -160,9 +161,11 @@
     <ClCompile Include="framework\server\ServicePublisher.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceClass.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceProvider.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInEndHandler\CashInEndHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInStartHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\ConfigureNoteTypesHandler.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\GetCashInStatusHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashManagementServiceProvider\CashManagementServiceClass.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashManagementServiceProvider\Handlers\GetBankNoteTypesHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashManagementServiceProvider\Handlers\ResetHandler.cpp" />
@@ -183,6 +186,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Devices\CashAcceptorSample\CashAcceptorSample.hpp" />
+    <ClInclude Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashInEnd\ExecuteCashInEnd.hpp" />
     <ClInclude Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashInStart\ExecuteCashInStart.hpp" />
     <ClInclude Include="Devices\CashAcceptorSample\ExecuteFunctions\ExecuteCashIn\ExecuteCashIn.hpp" />
     <ClInclude Include="Devices\CashAcceptorSample\Managers\EscrowManager\EscrowManager.hpp" />
@@ -200,15 +204,18 @@
     <ClInclude Include="framework\core\Acknowledge.hpp" />
     <ClInclude Include="framework\core\Attributes.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\CashAcceptorSchemas.hpp" />
-    <ClInclude Include="framework\core\CashAcceptor\CashInEndCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\CashInRollbackCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\Commands\CashInCommand.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\Commands\CashInStartCommand.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Commands\GetCashInStatusCommand.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\Completions\CashInCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Commands\CashInEndCommand.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Completions\CashInEndCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\Completions\CashInStartCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\CashUnitCountCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\Commands\ConfigureNoteTypesCommand.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\Completions\ConfigureNoteTypesCompletion.hpp" />
+    <ClInclude Include="framework\core\CashAcceptor\Completions\GetCashInStatusCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\ConfigureNoteReaderCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\DeviceLockControlCompletion.hpp" />
     <ClInclude Include="framework\core\CashAcceptor\Events\InputRefuseEvent.hpp" />
@@ -281,14 +288,18 @@
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInCommandEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInCommonCommandEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInEndCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInEndEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInRollbackCommandEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashInStartEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashUnitCountCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\GetCashInStatusEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\PreparePresentCommandEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInEndHandler\CashInEndHandler.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInHandler.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInStartHandler.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\ConfigureNoteTypesHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\GetCashInStatusHandler.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\ICashAcceptorService.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\CashInStatus.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashManagementServiceProvider\CashInStatusClass.hpp" />
@@ -327,6 +338,7 @@
     <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashInRollbackEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashInStartEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\ICashUnitCountEvents.hpp" />
+    <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\IGetCashInStatusEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\IPreparePresentEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashAcceptor\IReplenishEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\ServiceInterfaces\CashDispanser\ICountEvents.hpp" />
