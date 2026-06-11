@@ -6,24 +6,24 @@
 
 #include <boost/asio/awaitable.hpp>
 
-#include "../../../../server/ICommandHandler.hpp"
-#include "../../../../server/IConnection.hpp"
-#include "../../../../server/ICommandDispatcher.hpp"
-#include "../../../../server/IServiceProvider.hpp"
+#include "../../../server/ICommandHandler.hpp"
+#include "../../../server/IConnection.hpp"
+#include "../../../server/ICommandDispatcher.hpp"
+#include "../../../server/IServiceProvider.hpp"
 
-#include "../../../../core/Logger/ILogger.hpp"
-#include "../../../../core/common/MessageHeader.hpp"
+#include "../../../core/Logger/ILogger.hpp"
+#include "../../../core/common/MessageHeader.hpp"
 
-#include "../../../../core/CashAcceptor/Commands/CashInEndCommand.hpp"
-#include "../../../../core/CashAcceptor/Completions/CashInEndCompletion.hpp"
+#include "../../../core/CashAcceptor/Commands/CashInEndCommand.hpp"
+#include "../../../core/CashAcceptor/Completions/CashInEndCompletion.hpp"
 
-#include "../../ICashAcceptorDevice.hpp"
-#include "../../ICashAcceptorService.hpp"
-#include "../../Events/CashInEndEvents.hpp"
-#include "../../Events/CashInEndCommandEvents.hpp"
+#include "../ICashAcceptorDevice.hpp"
+#include "../ICashAcceptorService.hpp"
+#include "../Events/CashInEndEvents.hpp"
+#include "../Events/CashInEndCommandEvents.hpp"
 
-#include "../../../CommonServiceProvider/ICommonService.hpp"
-#include "../../../CashManagementServiceProvider/ICashManagementService.hpp"
+#include "../../CommonServiceProvider/ICommonService.hpp"
+#include "../../CashManagementServiceProvider/ICashManagementService.hpp"
 
 namespace XFS4IoTFramework::CashAcceptor
 {

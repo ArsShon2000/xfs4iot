@@ -486,7 +486,12 @@ namespace XFS4IoTFramework::Storage
     {
         if (j.contains("unrecognized") && !j.at("unrecognized").is_null())
         {
-            p.SetUnrecognized(j.at("unrecognized").get<int>());
+            int count = 0;
+            for (const auto& [key, value] : j.at("unrecognized").items())
+            {
+                count += value;
+            }
+            p.SetUnrecognized(count);
         }
 
         if (j.contains("itemCounts") && !j.at("itemCounts").is_null())

@@ -179,7 +179,8 @@ namespace XFS4IoTServer
             std::vector<std::string> versions,
             XFS4IoT::XFSConstants::ServiceClass serviceClass,
             bool isAsync,
-            std::shared_ptr<XFS4IoTServer::ServiceProvider> serviceProvider) const;
+            std::shared_ptr<XFS4IoTServer::ServiceProvider> serviceProvider,
+            std::map<std::string, XFS4IoT::MessageTypeInfo>& target) const;
 
         static std::string InterfaceNameToPrefix(
             XFS4IoT::Common::InterfaceClass::NameEnum interfaceName);

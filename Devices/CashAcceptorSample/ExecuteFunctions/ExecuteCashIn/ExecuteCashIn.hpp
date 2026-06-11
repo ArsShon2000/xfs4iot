@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../../CashAcceptorSample.hpp"
 
@@ -36,14 +36,16 @@ namespace XFS4IoTSP::CashAcceptor::Sample
             std::string& errorDescription) const;
 
         boost::asio::awaitable<XFS4IoTFramework::CashAcceptor::CashInResult> CompleteSuccess();
+        boost::asio::awaitable<XFS4IoTFramework::CashAcceptor::CashInResult> CheckLimit();
 
         boost::asio::awaitable<void> Refuse(RefusedReasonEnum reason);
         boost::asio::awaitable<void> SendStorageError(XFS4IoTFramework::Storage::FailureEnum failure);
+        RefusedReasonEnum LimitFailureToRefusedReason(
+            CashAcceptorSample::CashInLimitFailure failure) const;
 
         void SubscribeForDeviceEvents(std::shared_ptr<StateMachine::BlockedWaitTermination> terminator);
-        void AddAcceptedBanknote(uint16_t noteId);
-        void AddUnrecognizedBanknote();
-        std::optional<std::string> CashItemIdByNoteId(uint16_t noteId) const;
+        //void AddAcceptedBanknote(uint16_t noteId);
+        //void AddUnrecognizedBanknote();
         std::chrono::milliseconds CashInTimeout() const;
         void UpdateInputPositionStatus(bool accepted);
 
@@ -61,5 +63,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         int unrecognized_{ 0 };
         bool accepted_{ false };
         bool refused_{ false };
+        CashAcceptorSample::CashInLimitFailure limitFailure_{
+            CashAcceptorSample::CashInLimitFailure::None
+        };
     };
 }

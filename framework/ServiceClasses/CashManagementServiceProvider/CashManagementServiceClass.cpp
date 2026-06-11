@@ -275,7 +275,7 @@ namespace XFS4IoTServer
         // Create payload
         auto payload = std::make_shared<XFS4IoT::CashManagement::Events::ItemsTakenEventPayloadData>(
             convertPositionToXFS4IoT(position),
-            additionalBunches ? std::nullopt : additionalBunches);
+            std::move(additionalBunches));
 
         co_await ItemsTakenEventImpl(payload);
     }

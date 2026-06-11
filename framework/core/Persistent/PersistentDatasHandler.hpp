@@ -260,11 +260,7 @@ public:
     static constexpr const char* CASH_IN_STATUS_PATH = "CashInStatus";
     static constexpr const char* CASH_IN_STATUS_STATUS_PATH = "CashInStatus.Status";
     static constexpr const char* CASH_IN_STATUS_REFUSED_PATH = "CashInStatus.NumOfRefused";
-    static constexpr const char* CASH_IN_STATUS_ACCEPTED_ITEMS_PATH = "CashInStatus.AcceptedItems";
-    static constexpr const char* CASH_IN_STATUS_UNFIT_ITEMS_PATH = "CashInStatus.UnfitItems";
-    static constexpr const char* CASH_IN_STATUS_DISPUTED_ITEMS_PATH = "CashInStatus.DisputedItems";
-    static constexpr const char* CASH_IN_STATUS_UNRECOGNIZED_PATH = "CashInStatus.Unrecognized";
-    static constexpr const char* CASH_IN_STATUS_CASH_ITEM_COUNT_PATH = "CashInStatus.CashItemCount";
+    static constexpr const char* CASH_IN_STATUS_NOTE_NUMBER_LIST_PATH = "CashInStatus.NoteNumberList";
 
     bool setCashInStatus(const nlohmann::json& cashInStatus);
     nlohmann::json getCashInStatus(bool reloadFromFile = false);
@@ -277,12 +273,6 @@ public:
 
     bool setCashInNumOfRefused(uint16_t count);
     uint16_t getCashInNumOfRefused(bool reloadFromFile = false);
-
-    bool setCashInUnrecognized(uint16_t count);
-    uint16_t getCashInUnrecognized(bool reloadFromFile = false);
-
-    bool setCashInAcceptedItems(const nlohmann::json& acceptedItems);
-    nlohmann::json getCashInAcceptedItems(bool reloadFromFile = false);
 
     bool resetCashInStatus();
 

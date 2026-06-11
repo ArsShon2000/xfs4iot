@@ -1,6 +1,7 @@
 ﻿#include "GetCashInStatusHandler.hpp"
 
 #include <stdexcept>
+#include <unordered_map>
 
 #include "../../../core/Exceptions.hpp"
 
@@ -14,6 +15,47 @@ namespace XFS4IoTFramework::CashAcceptor
 
     using GetCashInStatusCompletionPayloadData =
         XFS4IoT::CashAcceptor::Completions::GetCashInStatusCompletionPayloadData;
+
+    namespace
+    {
+        std::shared_ptr<XFS4IoT::CashManagement::StorageCashCountsClass>
+            ToCompletionCashCounts(
+                const std::shared_ptr<XFS4IoTFramework::Storage::StorageCashCountClass>& sourceCounts)
+        {
+            if (!sourceCounts)
+            {
+                return nullptr;
+            }
+
+            if (sourceCounts->GetTotal() == 0)
+            {
+                return nullptr;
+            }
+
+            auto resultCounts =
+                std::make_shared<XFS4IoT::CashManagement::StorageCashCountsClass>(
+                    sourceCounts->GetUnrecognized());
+
+            std::unordered_map<
+                std::string,
+                std::shared_ptr<XFS4IoT::CashManagement::StorageCashCountClass>> itemCounts;
+
+            for (const auto& [cashItemId, count] : sourceCounts->GetItemCounts())
+            {
+                itemCounts.emplace(
+                    cashItemId,
+                    std::make_shared<XFS4IoT::CashManagement::StorageCashCountClass>(
+                        count.GetFit(),
+                        count.GetUnfit(),
+                        count.GetSuspect(),
+                        count.GetCounterfeit(),
+                        count.GetInked()));
+            }
+
+            resultCounts->setExtendedProperties(std::move(itemCounts));
+            return resultCounts;
+        }
+    }
 
     GetCashInStatusHandler::GetCashInStatusHandler(
         std::shared_ptr<XFS4IoTServer::IConnection> connection,
@@ -197,11 +239,7 @@ namespace XFS4IoTFramework::CashAcceptor
             std::make_shared<GetCashInStatusCompletionPayloadData>(
                 status,
                 cashInStatus->GetNumOfRefusedItems(),
-                cashInStatus->GetCashCounts()
-                ? std::make_shared<
-                XFS4IoT::CashManagement::StorageCashCountsClass>(
-                    cashInStatus->GetCashCounts())
-                : nullptr);
+                ToCompletionCashCounts(cashInStatus->GetCashCounts()));
 
         co_return CommandResult
         {

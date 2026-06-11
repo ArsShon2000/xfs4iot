@@ -53,7 +53,7 @@ namespace XFS4IoT::CashAcceptor::Completions
 	class GetCashInStatusCompletion : public XFS4IoT::Completion<GetCashInStatusCompletionPayloadData>
 	{
 	public:
-		static constexpr const char* CompletionName = "CashAcceptor.GetCashInStatusCompletion";
+		static constexpr const char* CompletionName = "CashAcceptor.GetCashInStatus";
 		static constexpr const char* Version = "1.0";
 
 		GetCashInStatusCompletion(

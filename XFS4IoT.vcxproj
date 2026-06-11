@@ -161,7 +161,7 @@
     <ClCompile Include="framework\server\ServicePublisher.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceClass.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\CashAcceptorServiceProvider.cpp" />
-    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInEndHandler\CashInEndHandler.cpp" />
+    <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInEndHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInStartHandler.cpp" />
     <ClCompile Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\ConfigureNoteTypesHandler.cpp" />
@@ -295,7 +295,7 @@
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\CashUnitCountCommandEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\GetCashInStatusEvents.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Events\PreparePresentCommandEvents.hpp" />
-    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInEndHandler\CashInEndHandler.hpp" />
+    <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInEndHandler.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInHandler.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\CashInStartHandler.hpp" />
     <ClInclude Include="framework\ServiceClasses\CashAcceptorServiceProvider\Handlers\ConfigureNoteTypesHandler.hpp" />

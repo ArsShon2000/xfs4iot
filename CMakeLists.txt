@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(WIN32)
 # Boost
-	find_package(Boost 1.74 REQUIRED COMPONENTS system thread asio beast)
+	find_package(Boost 1.74 REQUIRED COMPONENTS system thread asio beast filesystem)
 
 # nlohmann::json
 	find_package(nlohmann_json CONFIG REQUIRED)
@@ -21,7 +21,7 @@ if(WIN32)
 	find_package(boost_url CONFIG REQUIRED)
     find_package(miniz CONFIG REQUIRED)
 elseif(UNIX)
-	find_package(Boost 1.74 REQUIRED COMPONENTS system thread asio beast)
+	find_package(Boost 1.74 REQUIRED COMPONENTS system thread asio beast filesystem)
 	find_package(PkgConfig REQUIRED CONFIG)
 	find_package(nlohmann_json CONFIG REQUIRED)
 	find_package(OpenSSL REQUIRED)
@@ -81,7 +81,8 @@ add_executable(xfs4iot_cpp_sp
 	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/ConfigureNoteTypesHandler.cpp
 	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/CashInStartHandler.cpp
 	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/CashInHandler.cpp
-	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/CashInEndHandler/CashInEndHandler.cpp
+	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/CashInEndHandler.cpp
+	framework/ServiceClasses/CashAcceptorServiceProvider/Handlers/GetCashInStatusHandler.cpp
 
 
 	framework/ServiceClasses/CommonServiceProvider/Handlers/CapabilitiesHandler.cpp
@@ -124,6 +125,7 @@ if(WIN32)
 		Boost::asio
 		Boost::beast
 		Boost::url
+		Boost::filesystem
 		nlohmann_json::nlohmann_json
 		OpenSSL::SSL
 		OpenSSL::Crypto
@@ -149,6 +151,7 @@ elseif(UNIX)
 	Boost::asio
 	Boost::beast
 	Boost::url
+	Boost::filesystem
 	nlohmann_json::nlohmann_json
 	OpenSSL::SSL
 	OpenSSL::Crypto

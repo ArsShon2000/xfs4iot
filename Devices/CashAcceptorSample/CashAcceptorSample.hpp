@@ -7,6 +7,8 @@
 #include <thread>
 #include <semaphore>
 #include <atomic>
+#include <optional>
+#include <unordered_map>
 #include "../../framework/ServiceClasses/CommonServiceProvider/CommonCapabilitiesClass.hpp"
 #include "../../framework/core/Logger/ILogger.hpp"
 #include "../../framework/server/DeviceResult.hpp"
@@ -167,6 +169,13 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         void Initialize();
 
+
+        enum class CashInLimitFailure
+        {
+            None,
+            TotalItems,
+            Amount
+        };
 
         // ============================================================================
         // Купюры
@@ -556,6 +565,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         /// Указатель на устройство
         std::unique_ptr<FS365::HW::Dors::DorsHW> m_pDevice;
+        /// Флаг необходимости обновления информации о серийном номере и версии прошивки
+        bool m_bRefreshIdData;
         /// Идентификационные данные устройства
         FS365::HW::Dors::CIdentification m_idn;
         /// Текущее состояние устройства
@@ -572,10 +583,29 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         bool bConjointCashInIsActive{ false };
         /// Флаг замены кассеты
         bool m_bCassetteHasBeenReplaced;
+        /// Флаг инкассации в процессе
+        bool m_bExchangeInProgress;
+        /// Флаг запрещения отслеживания состояния manipulated
+        bool m_bDisableCuManipulated;
+        /**
+         * @brief Установить флаг manipulated.
+         */
+        void SetManipulated();
         /// Попытки восстановить порт
         int m_AttemptsToRestorePort = 0;
         /// Флаг, что устройство готово к обслуживанию
         bool m_SetAsReadyToServe = false;
+
+        /// Количество попыток мошенничества
+        uint16_t m_usFraudAttemptsCount;
+        /**
+         * @brief Увеличить счетчик попыток мошенничества.
+         */
+        void AddFraudAttempt();
+
+        void AddAcceptedBanknote(uint16_t noteId, CashInLimitFailure* limitFailure = nullptr, bool* accepted = nullptr, int* unrecognized = nullptr);
+
+        nlohmann::json AcceptedNotesByNoteId() const;
 
         // Синхронизация доступа к внутренним полям
         std::mutex m_mtx;
@@ -671,11 +701,26 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         // банкноты текущей cash-in transaction
 		std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass> currentCashInItems_;
 
-
         std::shared_ptr<std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass>> acceptedItems_;
+
+        struct CashInLimits
+        {
+            long totalItemsLimit{ 0 };
+            std::unordered_map<std::string, double> amountLimit;
+        };
+
+        void StoreCashInLimits(const XFS4IoTFramework::CashAcceptor::CashInStartRequest& request);
+        void ClearCashInLimits();
+        CashInLimitFailure CheckCashInLimitsForNote(uint16_t noteId);
+        long CurrentCashInTransactionItemCount();
+        double CurrentCashInTransactionAmount(const std::string& currency);
+
+        CashInLimits cashInLimits_;
 
 		// все поддерживаемые банком номиналы банкнот
         const std::map<std::string, XFS4IoTFramework::Common::CashManagementCapabilitiesClass::BanknoteItem> allBanknoteIDs_;
+        std::optional<std::string> CashItemIdByNoteId(uint16_t noteId) const;
+        void AddUnrecognizedBanknote(CashInLimitFailure *limitFailure = nullptr, bool *accepted = nullptr, int *unrecognized = nullptr);
 
         // Synchronization
         std::counting_semaphore<1> cashTakenSignal_;
