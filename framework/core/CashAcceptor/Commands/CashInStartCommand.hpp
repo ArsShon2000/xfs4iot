@@ -48,8 +48,8 @@ namespace XFS4IoT::CashAcceptor::Commands
             }
 
         private:
-            std::optional<std::string> currency_;
-            std::optional<double> value_;
+			std::optional<std::string> currency_; // Валюта в ISO 4217 формате
+			std::optional<double> value_;           // Лимит суммы в указанных единицах валюты
         };
 
         CashInStartCommandPayloadData(

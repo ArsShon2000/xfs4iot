@@ -12,20 +12,20 @@ using namespace FS365::HW::Dors;
 
 uint16_t PowerUpManager::GetAcceptorPartialState() {
 
-    switch (m_pHandler->m_State) {
-    case DorsHW::POLL_RES::PowerUpWithBillInStacker:
-        return (m_strategy == ALLOW_ACCEPT || m_strategy == ALLOW_ACCEPT_BILL_STACKER)
-            ? AcceptorPackage::ACCOK
-            : AcceptorPackage::ACCCUSTOP;
+	switch (m_pHandler->m_State) {
+	case DorsHW::POLL_RES::PowerUpWithBillInStacker:
+		return (m_strategy == ALLOW_ACCEPT || m_strategy == ALLOW_ACCEPT_BILL_STACKER)
+			? AcceptorPackage::ACCOK
+			: AcceptorPackage::ACCCUSTOP;
 
-    case DorsHW::POLL_RES::PowerUpWithBillInValidator:
-        return (m_strategy == ALLOW_ACCEPT)
-            ? AcceptorPackage::ACCOK
-            : AcceptorPackage::ACCCUSTOP;
+	case DorsHW::POLL_RES::PowerUpWithBillInValidator:
+		return (m_strategy == ALLOW_ACCEPT)
+			? AcceptorPackage::ACCOK
+			: AcceptorPackage::ACCCUSTOP;
 
-    default:
-        return AcceptorPackage::ACCOK;
-    }
+	default:
+		return AcceptorPackage::ACCOK;
+	}
 }
 
 
@@ -199,7 +199,8 @@ boost::asio::awaitable<XFS4IoT::MessageHeader::CompletionCodeEnum>  PowerUpManag
 	if (bNoteStacked) {
 		// Замятая банкнота была успешно складирована
 		if (hResult == XFS4IoT::MessageHeader::CompletionCodeEnum::Success) {
-			//m_pHandler->AddBanknote(usNoteID);
+			m_pHandler->AddAcceptedBanknote(usNoteID);
+			PersistentDatasHandler::GetInstance()->addCashUnitNotes(m_pHandler->AcceptedNotesByNoteId());
 
 			if (usNoteID == 0) {
 				m_pHandler->logger_->trace(std::format("{}(): В КАССЕТУ СКЛАДИРОВАНА: НЕРАСПОЗНАННАЯ ЗАМЯТАЯ БАНКНОТА", __FUNCTION__), LOGLEVEL1);
@@ -209,17 +210,17 @@ boost::asio::awaitable<XFS4IoT::MessageHeader::CompletionCodeEnum>  PowerUpManag
 			}
 			// Рассылка MediaDetected с указанием складирования в кассету
 			{
-//co_await events->MediaDetectedEvent(
-//XFS4IoT::CashManagement::ItemTargetEnumEnum::OutCenter,
-//std::nullopt,
-//std::nullopt);
+				co_await events->MediaDetectedEvent(
+					XFS4IoTFramework::CashManagement::ItemTargetEnum::OutCenter,
+					std::nullopt,
+					1);
 			}
 		}
 		else {
-//co_await events->MediaDetectedEvent(
-//XFS4IoT::CashManagement::ItemTargetEnumEnum::OutCenter,
-//std::nullopt,
-//std::nullopt);
+			co_await events->MediaDetectedEvent(
+				XFS4IoTFramework::CashManagement::ItemTargetEnum::OutCenter,
+				std::nullopt,
+				1);
 		}
 	}
 	else if (noteReturning) {
@@ -227,18 +228,18 @@ boost::asio::awaitable<XFS4IoT::MessageHeader::CompletionCodeEnum>  PowerUpManag
 			// В ходе сброса был возврат банкноты
 			m_pHandler->logger_->trace(std::format("{}(): ЗАМЯТАЯ БАНКНОТА ВОЗВРАЩЕНА ОБРАТНО", __FUNCTION__), LOGLEVEL1);
 		}
-//co_await events->MediaDetectedEvent(
-//XFS4IoT::CashManagement::ItemTargetEnumEnum::OutCenter,
-//std::nullopt,
-//std::nullopt);
+		co_await events->MediaDetectedEvent(
+			XFS4IoTFramework::CashManagement::ItemTargetEnum::OutCenter,
+			std::nullopt,
+			1);
 	}
-	//else if (DorsHW::_isNoteDetected(m_pHandler->m_stateBeforeResetStarted)) {
+	else if (DorsHW::_isNoteDetected(m_pHandler->m_stateBeforeResetStarted)) {
 		// Не удалось успешно обработать банкноту
-	co_await events->MediaDetectedEvent(
-		XFS4IoTFramework::CashManagement::ItemTargetEnum::OutCenter,
-		std::nullopt,
-		1);
-//}
+		co_await events->MediaDetectedEvent(
+			XFS4IoTFramework::CashManagement::ItemTargetEnum::OutCenter,
+			std::nullopt,
+			1);
+	}
 
 	co_return hResult;
 }

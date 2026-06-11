@@ -62,6 +62,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         cashInStatus_->SetStatus(StatusEnum::Active);
         cashInStatus_->SetNumOfRefusedItems(0);
+        cashInStatus_->SetCashCounts(
+            std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>());
         acceptedItems_->clear();
 
         SaveTransactionStatus();
@@ -80,12 +82,12 @@ namespace XFS4IoTSP::CashAcceptor::Sample
     {
         std::lock_guard lock(mutex_);
 
-        cashInStatus_->SetNumOfRefusedItems(cashInStatus_->GetNumOfRefusedItems() + 1);
+        cashInStatus_->SetNumOfRefusedItems(cashInStatus_->GetNumOfRefusedItems() + count);
 
         SaveTransactionStatus();
     }
 
-    void EscrowManager::AddStorageCashCount(XFS4IoTFramework::Storage::StorageCashCountClass& cashUnit)
+    void EscrowManager::AddNoteNumberList(XFS4IoTFramework::Storage::StorageCashCountClass& cashUnit)
     {
         std::lock_guard lock(mutex_);
 		// Суммируем
@@ -96,6 +98,15 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
     }
 
+	void EscrowManager::ResetNoteNumberList()
+	{
+        std::lock_guard lock(mutex_);
+		if (!cashInStatus_->GetCashCounts()->GetTotal()) {
+			cashInStatus_->SetCashCounts(nullptr);
+			SaveTransactionStatus();
+		}
+	}
+
     void EscrowManager::SaveTransactionStatus() const
     {
         PersistentDatasHandler::GetInstance()->setCashInTransactionStatus(
@@ -103,13 +114,18 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         PersistentDatasHandler::GetInstance()->setCashInNumOfRefused(cashInStatus_->GetNumOfRefusedItems());
 
-         nlohmann::json acceptedItemsJson = nlohmann::json::object();
-         for (const auto& [cashItemId, count] : *acceptedItems_)
-         {
-             acceptedItemsJson[cashItemId] = count;
-         }
-        
-         PersistentDatasHandler::GetInstance()->setCashInAcceptedItems(acceptedItemsJson);
+		nlohmann::json cashItemCountJson = nlohmann::json::object();
+        auto cashCounts = cashInStatus_->GetCashCounts();
+        if (cashCounts)
+        {
+            for (const auto& [cashItemId, count] : cashCounts->GetItemCounts())
+            {
+                cashItemCountJson[cashItemId] = count;
+            }
+        }
+        if (cashCounts->GetUnrecognized())
+            cashItemCountJson["Unrecognized"] = cashCounts->GetUnrecognized();
+		PersistentDatasHandler::GetInstance()->setCashInCashItemCount(cashItemCountJson);
     }
 
     void EscrowManager::LoadTransactionStatus()
@@ -134,31 +150,35 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         cashInStatus_->SetNumOfRefusedItems(persistent->getCashInNumOfRefused(true));
 
 
-		auto unrecognized = persistent->getCashInUnrecognized(true);
         std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass> itemCounts;
 		auto itemCountsJson = persistent->getCashInCashItemCount(true);
+        if (!itemCountsJson.is_object())
+        {
+            itemCountsJson = persistent->getCashInCashItemCount(true);
+        }
 
         if (itemCountsJson.is_object())
-         {
-             for (const auto& [cashItemId, value] : itemCountsJson.items())
-             {
-                 if (!value.is_object())
-                 {
-                     continue;
-                 }
-                 itemCounts.emplace(
-                     cashItemId,
-                     value.get<XFS4IoTFramework::Storage::CashItemCountClass>());
-             }
+        {
+            for (const auto& [cashItemId, value] : itemCountsJson.items())
+            {
+                if (!value.is_object())
+                {
+                    continue;
+                }
+
+                itemCounts.emplace(
+                    cashItemId,
+                    value.get<XFS4IoTFramework::Storage::CashItemCountClass>());
+            }
 		}
 
-		auto cashCounts = std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>(unrecognized, itemCounts);
+		auto cashCounts = std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>(0, itemCounts);
         cashInStatus_->SetCashCounts(cashCounts);
 
         acceptedItems_->clear();
 
         const auto acceptedItemsJson =
-            persistent->getCashInAcceptedItems(true);
+            persistent->getCashInCashItemCount(true);
 
         if (acceptedItemsJson.is_object())
         {

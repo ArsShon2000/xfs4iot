@@ -74,13 +74,14 @@ namespace XFS4IoTSP::CashAcceptor::Sample
                 errorCode);
         }
 
-        if (events_)
-        {
-            co_await events_->InsertItemsEvent();
-        }
+        //if (events_)
+        //{
+        //    co_await events_->InsertItemsEvent();
+        //}
 
         if (!handler_->m_pNotesInhibitManager_ || !handler_->m_pNotesInhibitManager_->AllowAccept())
         {
+            std::cout << "Не удалось разрешить прием банкнот на устройстве. \n";
             co_return XFS4IoTFramework::CashAcceptor::CashInResult(
                 CompletionCodeEnum::HardwareError,
                 "Не удалось разрешить прием банкнот на устройстве.");
@@ -91,6 +92,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
         std::stop_callback cancelCallback(cancellation_, [this]()
             {
+                std::cout << "cancelCallback \n";
                 InterruptRequest();
             });
 
@@ -122,11 +124,11 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         outcomes.push_back({ hardwareErrorOccurred });
         outcomes.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::DropCassetteOutOfPosition } } });
         outcomes.push_back({ StateMachine::EventTo{ { DorsHW::POLL_RES::DropCassetteJammed, DorsHW::POLL_RES::ValidatorJammed } } });
-        outcomes.push_back({ StateMachine::EventTo{ DorsHW::GetRejectStates() } });
+        //outcomes.push_back({ StateMachine::EventTo{ DorsHW::GetRejectStates() } });
 
         const auto waitResult = handler_->m_stateMachine.BlockedWait(
             outcomes,
-            CashInTimeout(),
+            std::chrono::milliseconds(INFINITE),
             terminator);
 
         if (cancellation_.stop_requested())
@@ -140,13 +142,31 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         {
         case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_0:
         case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_1:
+			// EscrowPos/Holding - банкнота в эскроу, ожидаем подтверждения от приложения для принятия или возврата банкноты
+
             if (!accepted_)
             {
-                AddAcceptedBanknote(processedNoteId_);
+                handler_->AddAcceptedBanknote(handler_->m_usCurrentNoteID, &limitFailure_, &accepted_, &unrecognized_);
             }
+            if (limitFailure_ != CashAcceptorSample::CashInLimitFailure::None)
+            {
+                co_await Refuse(LimitFailureToRefusedReason(limitFailure_));
+                co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                    CompletionCodeEnum::Canceled,
+                    "Операция CashIn отменена из-за превышения лимита.");
+            }
+
+            //if (limitFailure_ != CashAcceptorSample::CashInLimitFailure::None)
+            //{
+            //    co_await Refuse(LimitFailureToRefusedReason(limitFailure_));
+            //    co_return co_await CompleteSuccess();
+            //}
+
             co_return co_await CompleteSuccess();
 
         case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_2:
+			// DROP CASSETTE_FULL - в процессе принятия банкноты кассета приема стала полной, необходимо запретить дальнейший прием банкнот и уведомить приложение об ошибке
+            handler_->m_pNotesInhibitManager_->InhibitAccept();
             co_await Refuse(RefusedReasonEnum::CashInUnitFull);
             co_await SendStorageError(XFS4IoTFramework::Storage::FailureEnum::Full);
             co_return XFS4IoTFramework::CashAcceptor::CashInResult(
@@ -155,21 +175,40 @@ namespace XFS4IoTSP::CashAcceptor::Sample
                 CashInErrorCodeEnum::CashUnitError);
 
         case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_3:
+			// hardware error - в процессе принятия банкноты произошло аппаратное повреждение, необходимо запретить дальнейший прием банкнот и уведомить приложение об ошибке
+            handler_->m_pNotesInhibitManager_->InhibitAccept();
             co_return XFS4IoTFramework::CashAcceptor::CashInResult(
                 CompletionCodeEnum::HardwareError,
                 "Аппаратная ошибка валидатора.");
 
         case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_4:
-        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_5:
+            // DROP CASSETTE_OUT_OF_POSITION
+            handler_->m_pNotesInhibitManager_->InhibitAccept();
             co_await SendStorageError(XFS4IoTFramework::Storage::FailureEnum::Error);
             co_return XFS4IoTFramework::CashAcceptor::CashInResult(
                 CompletionCodeEnum::CommandErrorCode,
-                "Ошибка кассеты приема или замятие банкноты.",
+                "КАССЕТА ИЗВЛЕЧЕНА. ПРЕРЫВАЕМ CASH-IN ОПЕРАЦИЮ.",
+                CashInErrorCodeEnum::CashUnitError);
+        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_5:
+			// DropCassetteJammed/ VALIDATORJAMMED - в процессе принятия банкноты кассета приема стала неправильно установлена или зажевала банкноту, необходимо запретить дальнейший прием банкнот и уведомить приложение об ошибке
+            handler_->m_pNotesInhibitManager_->InhibitAccept();
+
+            if (handler_->m_usCurrentNoteID == 0) {
+                handler_->logger_->trace(std::format("{}() - ЗАМЯТИЕ БАНКНОТЫ. ПРЕРЫВАЕМ CASH-IN ОПЕРАЦИЮ", __FUNCTION__), LOGLEVEL1);
+            }
+            else {
+                handler_->logger_->trace(std::format("{}() - ЗАМЯТИЕ РАСПОЗНАННОЙ БАНКНОТЫ: xfsId = {}. ПРЕРЫВАЕМ CASH-IN ОПЕРАЦИЮ", __FUNCTION__, handler_->m_usCurrentNoteID), LOGLEVEL1);
+            }
+            co_await SendStorageError(XFS4IoTFramework::Storage::FailureEnum::Error);
+            co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                CompletionCodeEnum::CommandErrorCode,
+                "Замятие банкноты.",
                 CashInErrorCodeEnum::CashUnitError);
 
-        case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_6:
-            co_await Refuse(RefusedReasonEnum::InvalidBill);
-            co_return co_await CompleteSuccess();
+   //     case StateMachine::BlockedWaitResult::BWR_WAIT_EVENT_6:
+			//// REJ_INHIBIT - банкнота в эскроу признана неприемлемой (например, по результатам проверки на подлинность), необходимо отказать в приеме банкноты и уведомить приложение о причине отказа
+   //         co_await Refuse(RefusedReasonEnum::InvalidBill);
+   //         co_return co_await CompleteSuccess();
 
         case StateMachine::BlockedWaitResult::BWR_TIMEOUT:
             co_await Refuse(RefusedReasonEnum::NoBillsToDeposit);
@@ -179,6 +218,15 @@ namespace XFS4IoTSP::CashAcceptor::Sample
                 CashInErrorCodeEnum::NoItems);
 
         case StateMachine::BlockedWaitResult::BWR_CANCELLED:
+            handler_->m_pNotesInhibitManager_->InhibitAccept();
+            if (limitFailure_ != CashAcceptorSample::CashInLimitFailure::None)
+            {
+                co_await Refuse(LimitFailureToRefusedReason(limitFailure_));
+                co_return XFS4IoTFramework::CashAcceptor::CashInResult(
+                    CompletionCodeEnum::Canceled,
+                    "Операция CashIn прервана из-за превышения лимита.");
+            }
+
             if (accepted_)
             {
                 co_return co_await CompleteSuccess();
@@ -276,52 +324,89 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         }
     }
 
+    ExecuteCashIn::RefusedReasonEnum ExecuteCashIn::LimitFailureToRefusedReason(
+        CashAcceptorSample::CashInLimitFailure failure) const
+    {
+        switch (failure)
+        {
+        case CashAcceptorSample::CashInLimitFailure::TotalItems:
+            return RefusedReasonEnum::LimitOverTotalItems;
+        case CashAcceptorSample::CashInLimitFailure::Amount:
+            return RefusedReasonEnum::LimitOverAmount;
+        default:
+            return RefusedReasonEnum::DepositFailure;
+        }
+    }
+
     void ExecuteCashIn::SubscribeForDeviceEvents(std::shared_ptr<StateMachine::BlockedWaitTermination> terminator)
     {
         using enum DorsHW::POLL_RES;
+        guard_.add(handler_->m_stateMachine.Subscribe(StateMachine::EventFromTo{ DorsHW::POLL_RES::Initialize, DorsHW::POLL_RES::Returning },
+            [&](DorsHW::POLL_RES) {
+                // Идет возврат банкноты после выполнения сброса
+                std::cout << "Идет возврат банкноты после выполнения сброса \n";
+            })
+        );
 
         guard_.add(handler_->m_stateMachine.Subscribe(
-            StateMachine::EventTo{ { RejInhibit, EscrowPos, Holding } },
+            StateMachine::EventTo{ { RejInhibit } },
             [this](DorsHW::POLL_RES)
             {
                 std::lock_guard lock(stateMutex_);
-                processedNoteId_ = handler_->m_bAdditionalRes == 0xFE
+                std::cout << "RejInhibit \n";
+                handler_->m_usCurrentNoteID = handler_->m_bAdditionalRes == 0xFE
                     ? 0
                     : (handler_->m_usCurrentNoteID != 0
                         ? handler_->m_usCurrentNoteID
                         : static_cast<uint16_t>(handler_->m_bAdditionalRes));
             }));
 
+
+
+        //guard_.add(handler_->m_stateMachine.Subscribe(
+        //    StateMachine::EventTo{ { EscrowPos, Holding } },
+        //    [this, terminator](DorsHW::POLL_RES)
+        //    {
+        //        {
+        //            std::lock_guard lock(stateMutex_);
+        //            std::cout << "EscrowPos, Holding \n";
+        //            if (handler_->m_usCurrentNoteID == 0 && handler_->m_bAdditionalRes != 0xFE)
+        //            {
+        //                handler_->m_usCurrentNoteID = handler_->m_usCurrentNoteID != 0
+        //                    ? handler_->m_usCurrentNoteID
+        //                    : static_cast<uint16_t>(handler_->m_bAdditionalRes);
+        //            }
+
+        //            if (!accepted_)
+        //            {
+        //                AddAcceptedBanknote(handler_->m_usCurrentNoteID);
+        //            }
+        //        }
+
+        //        //terminator->AsyncCancel();
+        //    }));
+
+
         guard_.add(handler_->m_stateMachine.Subscribe(
-            StateMachine::EventTo{ { EscrowPos, Holding } },
-            [this, terminator](DorsHW::POLL_RES)
             {
-                {
-                    std::lock_guard lock(stateMutex_);
-                    if (processedNoteId_ == 0 && handler_->m_bAdditionalRes != 0xFE)
-                    {
-                        processedNoteId_ = handler_->m_usCurrentNoteID != 0
-                            ? handler_->m_usCurrentNoteID
-                            : static_cast<uint16_t>(handler_->m_bAdditionalRes);
-                    }
-
-                    if (!accepted_)
-                    {
-                        AddAcceptedBanknote(processedNoteId_);
-                    }
-                }
-
-                terminator->AsyncCancel();
-            }));
+                StateMachine::EventFromTo{ DorsHW::GetRejectStates(), DorsHW::POLL_RES::BillStacked },
+                StateMachine::EventFromTo{ DorsHW::POLL_RES::BillStacked, { { DorsHW::POLL_RES::ValidatorJammed, DorsHW::POLL_RES::DropCassetteFull } } }
+            },
+            [&](DorsHW::POLL_RES) {
+                handler_->logger_->trace(std::format("{}() - Сработала защита от возврата ранее складированной банкноты. Удерживаем банкноту с идентификатором номинала {}", __FUNCTION__, handler_->m_usCurrentNoteID), LOGLEVEL1);
+                
+            })
+        );
 
         guard_.add(handler_->m_stateMachine.Subscribe(
             StateMachine::EventTo{ BillStacked },
             [this, terminator](DorsHW::POLL_RES)
             {
                 std::lock_guard lock(stateMutex_);
+                std::cout << "BillStacked \n";
                 if (!accepted_)
                 {
-                    AddAcceptedBanknote(processedNoteId_);
+                    handler_->AddAcceptedBanknote(handler_->m_usCurrentNoteID, &limitFailure_, &accepted_, &unrecognized_);
                 }
                 terminator->AsyncCancel();
             }));
@@ -331,81 +416,102 @@ namespace XFS4IoTSP::CashAcceptor::Sample
             [this](DorsHW::POLL_RES)
             {
                 std::lock_guard lock(stateMutex_);
-                processedNoteId_ = 0;
+                std::cout << "Accepting \n";
+                handler_->m_usCurrentNoteID = 0;
             }));
+
+
+        guard_.add(handler_->m_stateMachine.Subscribe(StateMachine::EventTo{ DorsHW::POLL_RES::Idling },
+            [this](DorsHW::POLL_RES) {
+                // Если перед Idling банкнота была взята событие SendInsertItemsEvent происходил первее, так как код в
+                // DorsPSHandler.cpp выполнялся позднее. Поэтому SendItemsTaken перенес сюда.
+                // Данная проблема была в старой версии драйвера
+                if (handler_->m_bNotesArePresented)
+                {
+                    std::cout << "SendItemsTaken пкока не реализован. Нужно доделать \n";
+                }
+                // Устройство готово к приему банкнот, отправляем соответствующее событие
+
+                if (events_)
+                {
+                    //co_await events_->InsertItemsEvent();
+                    boost::asio::co_spawn(
+                        handler_->GetServiceProvider()->getIoContext(),
+                        events_->InsertItemsEvent(),
+                        boost::asio::detached
+                    );
+                }
+            })
+        );
     }
 
-    void ExecuteCashIn::AddAcceptedBanknote(uint16_t noteId)
-    {
-        if (accepted_)
-        {
-            return;
-        }
+    //void ExecuteCashIn::AddAcceptedBanknote(uint16_t noteId)
+    //{
+    //    if (accepted_)
+    //    {
+    //        return;
+    //    }
 
-        auto cashItemId = CashItemIdByNoteId(noteId);
-        if (!cashItemId)
-        {
-            AddUnrecognizedBanknote();
-            return;
-        }
+    //    const auto limitFailure = handler_->CheckCashInLimitsForNote(noteId);
+    //    if (limitFailure != CashAcceptorSample::CashInLimitFailure::None)
+    //    {
+    //        limitFailure_ = limitFailure;
+    //        return;
+    //    }
 
-        const XFS4IoTFramework::Storage::CashItemCountClass itemCount(1, 0, 0, 0, 0);
-        handler_->currentCashInItems_[*cashItemId] += itemCount;
-        (*handler_->acceptedItems_)[*cashItemId] += itemCount;
+    //    auto cashItemId = handler_->CashItemIdByNoteId(noteId);
+    //    if (!cashItemId)
+    //    {
+    //        handler_->AddUnrecognizedBanknote(limitFailure_, accepted_, unrecognized_);
+    //        return;
+    //    }
 
-        XFS4IoTFramework::Storage::StorageCashCountClass cashCount(0, { { *cashItemId, itemCount } });
-        if (handler_->escrowManager_)
-        {
-            handler_->escrowManager_->AddStorageCashCount(cashCount);
-        }
+    //    const XFS4IoTFramework::Storage::CashItemCountClass itemCount(1, 0, 0, 0, 0);
+    //    handler_->currentCashInItems_[*cashItemId] += itemCount;
+    //    (*handler_->acceptedItems_)[*cashItemId] += itemCount;
 
-        accepted_ = true;
+    //    XFS4IoTFramework::Storage::StorageCashCountClass cashCount(0, { { *cashItemId, itemCount } });
+    //    if (handler_->escrowManager_)
+    //    {
+    //        handler_->escrowManager_->AddNoteNumberList(cashCount);
+    //    }
 
-        if (handler_->logger_)
-        {
-            handler_->logger_->trace(
-                std::format("{}() - принята банкнота noteId={}, cashItemId={}", __FUNCTION__, noteId, *cashItemId),
-                LOGLEVEL1);
-        }
-    }
+    //    accepted_ = true;
 
-    void ExecuteCashIn::AddUnrecognizedBanknote()
-    {
-        ++unrecognized_;
+    //    if (handler_->logger_)
+    //    {
+    //        handler_->logger_->trace(
+    //            std::format("{}() - принята банкнота noteId={}, cashItemId={}", __FUNCTION__, noteId, *cashItemId),
+    //            LOGLEVEL1);
+    //    }
+    //}
 
-        XFS4IoTFramework::Storage::StorageCashCountClass cashCount(1, {});
-        if (handler_->escrowManager_)
-        {
-            handler_->escrowManager_->AddStorageCashCount(cashCount);
-        }
+    //void ExecuteCashIn::AddUnrecognizedBanknote()
+    //{
+    //    const auto limitFailure = handler_->CheckCashInLimitsForNote(0);
+    //    if (limitFailure != CashAcceptorSample::CashInLimitFailure::None)
+    //    {
+    //        limitFailure_ = limitFailure;
+    //        return;
+    //    }
 
-        accepted_ = true;
+    //    ++unrecognized_;
 
-        if (handler_->logger_)
-        {
-            handler_->logger_->trace(
-                std::format("{}() - принята нераспознанная банкнота", __FUNCTION__),
-                LOGLEVEL1);
-        }
-    }
+    //    XFS4IoTFramework::Storage::StorageCashCountClass cashCount(1, {});
+    //    if (handler_->escrowManager_)
+    //    {
+    //        handler_->escrowManager_->AddNoteNumberList(cashCount);
+    //    }
 
-    std::optional<std::string> ExecuteCashIn::CashItemIdByNoteId(uint16_t noteId) const
-    {
-        if (noteId == 0)
-        {
-            return std::nullopt;
-        }
+    //    accepted_ = true;
 
-        for (const auto& [cashItemId, banknote] : handler_->allBanknoteIDs_)
-        {
-            if (banknote.GetNoteId() == noteId)
-            {
-                return cashItemId;
-            }
-        }
-
-        return std::nullopt;
-    }
+    //    if (handler_->logger_)
+    //    {
+    //        handler_->logger_->trace(
+    //            std::format("{}() - принята нераспознанная банкнота", __FUNCTION__),
+    //            LOGLEVEL1);
+    //    }
+    //}
 
     std::chrono::milliseconds ExecuteCashIn::CashInTimeout() const
     {

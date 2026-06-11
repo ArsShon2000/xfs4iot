@@ -75,7 +75,7 @@ namespace XFS4IoT::CashManagement::Events
     {
     public:
         static constexpr const char* EventName = "CashManagement.ItemsPresentedEvent";
-        static constexpr const char* Version = "1.0";
+        static constexpr const char* Version = "2.0";
 
         explicit ItemsPresentedEvent(
             std::shared_ptr<ItemsPresentedEventPayloadData> payload)

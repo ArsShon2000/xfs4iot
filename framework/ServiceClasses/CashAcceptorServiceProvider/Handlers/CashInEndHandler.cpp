@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "../../../../core/Exceptions.hpp"
-#include "../../CashAcceptorServiceProvider.hpp"
+#include "../../../core/Exceptions.hpp"
+#include "../CashAcceptorServiceProvider.hpp"
 
 namespace XFS4IoTFramework::CashAcceptor
 {

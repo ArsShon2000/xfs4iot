@@ -13,8 +13,8 @@ namespace XFS4IoT::CashAcceptor::Commands
         : public XFS4IoT::Commands::Command<XFS4IoT::MessagePayloadBase>
     {
     public:
-        static constexpr const char* CommandName = "CashAcceptor.GetCashInStatusCommand";
-        static constexpr const char* Version = "1.0";
+        static constexpr const char* CommandName = "CashAcceptor.GetCashInStatus";
+        static constexpr const char* Version = "2.0";
 
         GetCashInStatusCommand(int requestId, int timeout)
             : XFS4IoT::Commands::Command<XFS4IoT::MessagePayloadBase>(

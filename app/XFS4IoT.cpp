@@ -1,6 +1,7 @@
 ﻿#include <iostream>
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include "../framework/core/Persistent/FilePersistentData.hpp"
 #include "../framework/core/Logger/ConsoleLogger.hpp"
 #include "../framework/server/ServicePublisher.hpp"
@@ -14,6 +15,11 @@ constexpr uint16_t BYTE_SIZE = 8;
 
 int main()
 {
+	auto exeDir =
+		boost::dll::program_location().parent_path();
+
+	std::filesystem::current_path(static_cast<std::filesystem::path>(exeDir.string()));
+
 	auto logger = std::make_shared<LoggerSpdlog>();
 	try {
 		SettingModule::GetInstance()->initializeParameters(logger);
@@ -130,7 +136,6 @@ int main()
 		auto status = static_cast<XFS4IoTFramework::CashManagement::CashInStatusClass::StatusEnum>(
 			PersistentDatasHandler::GetInstance()->getCashInTransactionStatus(true));
 		auto refusedItems = PersistentDatasHandler::GetInstance()->getCashInNumOfRefused(true);
-		auto unrecognized = PersistentDatasHandler::GetInstance()->getCashInUnrecognized(true);
 		auto cashCounts = std::make_shared<XFS4IoTFramework::Storage::StorageCashCountClass>();
 		auto cashCountsJson = PersistentDatasHandler::GetInstance()->getCashInCashItemCount();
 		XFS4IoTFramework::Storage::from_json(cashCountsJson, *cashCounts);

@@ -125,7 +125,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 			XFS4IoTFramework::Common::CashManagementCapabilitiesClass::RetractAreaEnum::NotSupported, //RetractAreaEnum::NotSupported
 			XFS4IoTFramework::Common::CashManagementCapabilitiesClass::RetractTransportActionEnum::NotSupported,
 			XFS4IoTFramework::Common::CashManagementCapabilitiesClass::RetractStackerActionEnum::NotSupported,
-			XFS4IoTFramework::Common::CashAcceptorCapabilitiesClass::CashInLimitEnum::NotSupported, // byTotalItems
+			XFS4IoTFramework::Common::CashAcceptorCapabilitiesClass::CashInLimitEnum::ByAmount
+			| XFS4IoTFramework::Common::CashAcceptorCapabilitiesClass::CashInLimitEnum::ByTotalItems, // byTotalItems
 			XFS4IoTFramework::Common::CashAcceptorCapabilitiesClass::CountActionEnum::NotSupported,
 			XFS4IoTFramework::Common::CashAcceptorCapabilitiesClass::RetainCounterfeitActionEnum::NotSupported)
 
@@ -250,6 +251,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 		, m_stateMachine(FS365::HW::Dors::DorsHW::POLL_RES::Unknown)
 		, bConjointCashInIsActive(false)
 		, m_bCassetteHasBeenReplaced{ false }
+		, m_bExchangeInProgress{ false }
+		, m_bDisableCuManipulated{ false }
 		, acceptedItems_(std::make_shared<std::map<std::string, XFS4IoTFramework::Storage::CashItemCountClass>>())
 	{
 		if (!logger_)
@@ -374,6 +377,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 	void CashAcceptorSample::fnDevicePolling()
 	{
 		using enum FS365::HW::Dors::DorsHW::POLL_RES;
+		using namespace FS365::HW::Dors;
 		bool _bFirstIteration{ true };
 
 		// Первая загрузка
@@ -403,10 +407,10 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
 			// Опрос устройства
 			auto _newState = m_pDevice->Poll(m_bAdditionalRes, hwServiceBytes);
-			//std::cout << "Worker THREAD: " << std::this_thread::get_id() << " POLLING: CURRENT STATE -> " << FS365::HW::Dors::GetPOLL_RESText(_newState) << "\t" << getCurrentTimeFormatted() << std::endl;
+			//std::cout << "Worker THREAD: " << std::this_thread::get_id() << " POLLING: CURRENT STATE -> " << GetPOLL_RESText(_newState) << "\t" << getCurrentTimeFormatted() << std::endl;
 
 			// Если получаем проблему с портом, то делаем 10 попыток восстановления, потом только отправляем плохой статус, если не восстановились.
-			if (_newState ==FS365::HW::Dors::DorsHW::POLL_RES::PortError) {
+			if (_newState == DorsHW::POLL_RES::PortError) {
 
 				{
 					if (GetInfoStatus::GetInstance()->device != DeviceStatusPackage::NODEVICE && GetInfoStatus::GetInstance()->device != DeviceStatusPackage::POWEROFF)
@@ -451,7 +455,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 				{
 					if (std::chrono::steady_clock::now() - lastHoldSend >= 5000ms)
 					{
-						if (m_pDevice->Hold() == FS365::HW::Dors::DorsHW::RESULT::Ok)
+						if (m_pDevice->Hold() == DorsHW::RESULT::Ok)
 						{
 							lastHoldSend = std::chrono::steady_clock::now();
 						}
@@ -484,34 +488,24 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 			}
 
 			if (bFirstOnline
-				&&FS365::HW::Dors::DorsHW::_isOnline(_newState)
-				//&& _newState !=FS365::HW::Dors::DorsHW::POLL_RES::Initialize
+				&&DorsHW::_isOnline(_newState)
+				//&& _newState !=DorsHW::POLL_RES::Initialize
 				) {
 				bFirstOnline = false;
 				//FillCashInfo(m_cashUnitInfo);
 				//SendDeviceStatusEvent(GetLogicalServiceName().c_str(), DEVONLINE);
-				//m_executorThread = std::make_unique<std::jthread>([this]() {
-				//	ExecutorThread();
-				//	});
-
-				//if (!::SetThreadPriority(m_executorThread->native_handle(), THREAD_PRIORITY_TIME_CRITICAL)) {
-				//	unsigned long dwResult = ::GetLastError();
-				//	logger_->warn(std::format("{}() - НЕВОЗМОЖНО ИЗМЕНИТЬ ПРИОРИТЕТ ПРОЦЕССА: {}", __FUNCTION__, dwResult), LOGLEVEL1);
-				//	std::cout << __FUNCTION__ << "() - НЕВОЗМОЖНО ИЗМЕНИТЬ ПРИОРИТЕТ ПРОЦЕССА: " << dwResult;
-				//}
-
 				// Перезагрузка ПО устройства
 				// @note: В состоянии PowerUp устройство не требует перезагрузки
-				if (!FS365::HW::Dors::DorsHW::_isPowerUp(_newState)) {
+				if (!DorsHW::_isPowerUp(_newState)) {
 					m_pDevice->Reboot();
 					continue;
 				}
 			}
 
-			logger_->trace(std::format("POLLING. NEW STATE {} -> {}", FS365::HW::Dors::DorsHW::PollResToString(m_PreviousState), FS365::HW::Dors::DorsHW::PollResToString(_newState)));
+			logger_->trace(std::format("POLLING. NEW STATE {} -> {}", DorsHW::PollResToString(m_PreviousState), DorsHW::PollResToString(_newState)));
 			{
 				std::lock_guard<std::mutex> lock{ m_mtx };
-				m_pDevice->println(std::format("New state ------------------- {}", FS365::HW::Dors::DorsHW::PollResToString(_newState)));
+				m_pDevice->println(std::format("New state ------------------- {}", DorsHW::PollResToString(_newState)));
 			}
 
 
@@ -528,8 +522,8 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 				}
 
 				// 2. Установка номинала
-				if (m_State ==FS365::HW::Dors::DorsHW::POLL_RES::EscrowPos
-					|| ((m_State ==FS365::HW::Dors::DorsHW::POLL_RES::RejInhibit)
+				if (m_State ==DorsHW::POLL_RES::EscrowPos
+					|| ((m_State ==DorsHW::POLL_RES::RejInhibit)
 						&& (m_bAdditionalRes != 0xFE)))
 				{
 					std::set<uint16_t> allBanknoteIds;
@@ -540,7 +534,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 					auto it = allBanknoteIds.find(m_bAdditionalRes);
 					//auto it = m_denominationsPhysicalToLogical.find(m_bAdditionalRes);
 					if (it != allBanknoteIds.end()) {
-						if (m_State ==FS365::HW::Dors::DorsHW::POLL_RES::RejInhibit)
+						if (m_State ==DorsHW::POLL_RES::RejInhibit)
 						{
 							m_usCurrentNoteID = 0;
 							logger_->trace(std::format("{}() - НОМИНАЛ БАНКНОТЫ РАСПОЗНАН: BYTE2 = {}, НО НЕРАЗРЕШЕНА ДЛЯ ПРИЕМА", __FUNCTION__, m_bAdditionalRes), LOGLEVEL1);
@@ -555,255 +549,249 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 					}
 				}
 			}
-//
+
 			m_stateMachine.ChangeState(m_State);
-//
-//			switch (m_State)
-//			{
-//				// 
-//			case FS365::HW::Dors::DorsHW::POLL_RES::DropCassetteOutOfPosition:
-//				GetInfoStatus::GetInstance()->fillResult();
-//				SetManipulated();
-//				SendCashUnitInfoChanged();
-//				m_bCassetteMissing = true;
-//				break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::Initialize:
-//			{
-//				if (m_bCassetteMissing) {
-//					// Если кассету вернули обратно, а мы не в цикле инкасации то считаем это манипуляцией
-//					if (!m_bExchangeInProgress) {
-//						SetManipulated();
-//					}
-//					m_bCassetteMissing = false;
-//					SendCashUnitInfoChanged();
-//				}
-//
-//				m_pDevice->states_stack_transfer_enable(true);
-//
-//				auto idRefresResult = m_pDevice->Identification(m_idn);
-//				if (DorsHW::RESULT::Ok == idRefresResult) {
-//					m_bRefreshIdData = false;
-//				}
-//
-//				if (m_PreviousState ==FS365::HW::Dors::DorsHW::POLL_RES::Accepting) {
-//					SendItemsPresented();
-//				}
-//			}
-//			break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::DropCassetteFull:
-//			{
-//				if (DorsHW::POLL_RES::Returning == m_PreviousState
-//					||FS365::HW::Dors::DorsHW::POLL_RES::BillReturned == m_PreviousState
-//					||FS365::HW::Dors::DorsHW::_isRejCode(m_PreviousState)
-//					) {
-//					SendItemsTaken();
-//				}
-//				SendCashUnitInfoChanged();
-//			}
-//			break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejDensity:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejBillInHead:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejConveying:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejIdentification:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejInhibit:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejFastFeed:
-//			{
-//				SendInputRefuse();
-//			}
-//			break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejInsertion:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejLength:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejMagnetic:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejMultiplying:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejOperation:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejIAS:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejNotebase:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejUV:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejTape:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejEntryCassetteSns:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejFastConveying:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejTrayClosed:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejTimeout:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::RejUnknown:
-//			{
-//				SendInputRefuse();
-//			}
-//			break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::Accepting:
-//			{
-//				SendItemInserted();
-//			}
-//			break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::Idling:
-//				if (!m_pEscrowManager->IsCashInActive())
-//				{
-//					if (DorsHW::POLL_RES::Returning == m_PreviousState
-//						||FS365::HW::Dors::DorsHW::POLL_RES::BillReturned == m_PreviousState
-//						||FS365::HW::Dors::DorsHW::_isRejCode(m_PreviousState))
-//					{
-//						SendItemsTaken();
-//					}
-//				}
-//				EnsureBillTableIsAvailable();
-//				break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::UnitDisabled:
-//				if (m_bNotesArePresented                                        // Если банкноты были представлены
-//					&&
-//					(                                                           // И предыдущее состояние было одним из:
-//						DorsHW::POLL_RES::Returning == m_PreviousState
-//						||FS365::HW::Dors::DorsHW::POLL_RES::BillReturned == m_PreviousState
-//						||FS365::HW::Dors::DorsHW::_isRejCode(m_PreviousState)
-//						)
-//					) {
-//					// Внимание! Если произошла инициализация устройства во время приёма банкноты и было сгенерировано событие 
-//					// "банкнота предъявлена", то попав в UnitDisabled мы должны сгенерировать ItemsTaken.
-//					SendItemsTaken();
-//				}
-//
-//				// Если требуется обновить ID данных (после замены кассеты)
-//				if (m_idn.IsEmpty() || m_bRefreshIdData) {                                          // Если ID данных нет, пробуем получить 
-//					auto idRefresResult = m_pDevice->Identification(m_idn);     // Пробуем получить ID данные
-//					if (DorsHW::RESULT::Ok == idRefresResult) {
-//						m_bRefreshIdData = false;                           // Флаг обновления ID данных сброшен
-//					}
-//				}
-//
-//
-//				if (bRefreshCassetteHighLevel) {    // При старте ПО и при восстановлении связи с устройством 
-//					if (m_AllNumberList.GetTotalNotesCount() >= m_ulThreshold) {    // Если кол-во купюр >= THRESHOLD, сообщить устройству, что достигли уровня HIGH
-//						m_pDevice->CassetteHighLevel(true);                         // Инициируем установку HIGH флага в устройстве
-//					}
-//					else {
-//						m_pDevice->CassetteHighLevel(false);
-//					}
-//					bRefreshCassetteHighLevel = false;                              // 
-//				}
-//
-//				EnsureBillTableIsAvailable();
-//				break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::BillStacked:
-//				if (m_PreviousState ==FS365::HW::Dors::DorsHW::POLL_RES::Stacking)
-//				{
-//					AddBanknote(m_usCurrentNoteID);
-//					FillCashInfo(m_cashUnitInfo);
-//					if (m_usCurrentNoteID == 0) {
-//						logger_->trace(std::format("{}() - В КАССЕТУ СКЛАДИРОВАНА: НЕРАСПОЗНАННАЯ БАНКНОТА", __FUNCTION__), LOGLEVEL1);
-//					}
-//					else {
-//						logger_->trace(std::format("{}() - В КАССЕТУ СКЛАДИРОВАНА: БАНКНОТА С ИНДЕКСОМ {}", __FUNCTION__, m_usCurrentNoteID), LOGLEVEL1);
-//					}
-//				}
-//				break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::Returning:
-//			{
-//				if (!m_curRq
-//					) {
-//					// Банкнота вернулась в не рамках отработки XFS запроса:
-//					// 1. В результате автоматического аппаратного сброса
-//					// 2. По escrow таймауту
-//////////////////////////// if (GetinfoCashinStatus::GetInstance()->IsCashInActive()) {
-//						//    GetinfoCashinStatus::GetInstance()->ResetNoteNumberList();
-//						//}
-//
-//					if (m_pEscrowManager->IsCashInActive()) {
-//						m_pEscrowManager->ResetNoteNumberList();
-//					}
-//				}
-//			}
-//			break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::BillReturned:
-//				// Для DBA отправка события только когда банкнота физически предъявлена.
-//				// В состояние BillReturned попадаем в следующих случаях:
-//				// 1. Rejecting -> BillReturned (предъявление банкноты после отбраковки)
-//				// 2. Returning -> BillReturned (предъявление банкноты после возврата)
-//				SendItemsPresented();
-//				break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::Cheated:
-//			{
-//				// Производим единовременную рассылку событий USER_ERROR с предупреждением о попытке мошенничества
-//				char pszMessage[] = "            CIM: CHEATED";
-//				std::vector< BYTE > arrMessage(pszMessage, pszMessage + sizeof(pszMessage));
-//				SendUserErrorEvent(GetLogicalServiceName().c_str(), WFS_ERR_ACT_NOACTION, arrMessage);
-//
-//			} break;
-//
-//			case FS365::HW::Dors::DorsHW::POLL_RES::FishingDetected:	// Новое название по протоколу об. дан. DORS 210BA
-//			{
-//				if (DorsHW::POLL_RES::FishingDetected != m_PreviousState) {
-//
-//					AddFraudAttempt();
-//
-//					// Производим единовременную рассылку событий USER_ERROR с предупреждением о попытке мошенничества
-//					char pszMessage[] = "            CIM: FRAUD DETECTED";
-//					std::vector< BYTE > arrMessage(pszMessage, pszMessage + sizeof(pszMessage));
-//					SendUserErrorEvent(GetLogicalServiceName().c_str(), WFS_ERR_ACT_NOACTION, arrMessage);
-//				}
-//			} break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::ValidatorJammed:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::DropCassetteJammed:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::StackMotorFail:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::TransportMotorFail:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::InitialCassetteStatusFail:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::OpticCanalFail:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::MagneticCanalFail:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::StartTrayFailure:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::Group47UnknownFailure:
-//				// Любая ошибка оборудования в процессе приёма наличных - взводим ивент, извещающий об ошибке операции
-//				SendHardwareErrorEvent(GetLogicalServiceName().c_str(), WFS_ERR_ACT_HWMAINT);
-//				SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVHWERROR);
-//				break;
-//			case FS365::HW::Dors::DorsHW::POLL_RES::PowerUp:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::PowerUpWithBillInValidator:
-//			case FS365::HW::Dors::DorsHW::POLL_RES::PowerUpWithBillInStacker:
-//			{
-//				// Питание было сброшено
-//				// Заказываем обновление флага HIGH
-//				bRefreshCassetteHighLevel = true;
-//
-//				// Подача Reset с учетом стратегии
-//				m_pPowerUpManager->AsyncReset(true);
-//				//m_pDevice->Reset();
-//				m_pDevice->states_stack_transfer_enable(true);
-//
-//			} break;
-//			}
-//
-//			// Если зафиксирован переход из ErrPort
-//			if ((m_PreviousState ==FS365::HW::Dors::DorsHW::POLL_RES::PortError && !DorsHW::_isHWError(m_State)) || (DorsHW::_isHWError(m_PreviousState) && m_State !=FS365::HW::Dors::DorsHW::POLL_RES::PortError && m_State !=FS365::HW::Dors::DorsHW::POLL_RES::Initialize)) {
-//
-//				// если фиксируем переход из PortError - отправляем событие DEVICE STATUS CHANGED (DEV_ONLINE)
-//				logger_->warn(std::format("{}() - ЗАФИКСИРОВАН ПЕРЕХОД ИЗ СОСТОЯНИЯ PORT_ERROR. ИНИЦИИРУЕМ РАССЫЛКУ СОБЫТИЙ DEVICE_STATUS_CHANGED (DEV_ONLINE)", __FUNCTION__), LOGLEVEL1);
-//				SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVONLINE);
-//
-//				// Требуем обновление версии прошивки и SN
-//				m_bRefreshIdData = true;
-//			}
-//
-//
-//			// Команда ресет завершилось
-//			if (m_PreviousState ==FS365::HW::Dors::DorsHW::POLL_RES::Initialize && m_State ==FS365::HW::Dors::DorsHW::POLL_RES::UnitDisabled) {
-//				m_pDevice->m_bResetOperationInProgress = false;
-//			}
-//
-//			// Если зафиксирован переход из ErrPort
-//			if ((m_PreviousState ==FS365::HW::Dors::DorsHW::POLL_RES::PortError && !DorsHW::_isHWError(m_State)) ||
-//				(DorsHW::_isHWError(m_PreviousState) && m_State !=FS365::HW::Dors::DorsHW::POLL_RES::PortError && m_State !=FS365::HW::Dors::DorsHW::POLL_RES::Initialize)) {
-//				// Если фиксируем переход из PortError - отправляем событие DEVICE STATUS CHANGED (DEV_ONLINE)
-//
-//			}
-//
-//			// Если фиксируем переход в PortError - отправляем событие DEVICE STATUS CHANGED (DEV_POWEROFF)
-//			if (DorsHW::POLL_RES::PortError == m_State) {
-//				std::lock_guard<std::mutex> lock{ m_mtx };
-//				if (m_pDevice->GetSoftwareConfigurationFault())
-//					SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVNODEVICE);
-//				else
-//				{
-//					logger_->warn(std::format("{}() - ЗАФИКСИРОВАН ПЕРЕХОД В СОСТОЯНИЕ PORTERROR. ИНИЦИИРУЕМ РАССЫЛКУ СОБЫТИЙ DEVICE_STATUS_CHANGED (DEV_POWEROFF)", __FUNCTION__), LOGLEVEL1);
-//					m_pDevice->println(__FUNCTION__, "() - ЗАФИКСИРОВАН ПЕРЕХОД В СОСТОЯНИЕ PORTERROR. ИНИЦИИРУЕМ РАССЫЛКУ СОБЫТИЙ DEVICE_STATUS_CHANGED (DEV_POWEROFF)");
-//					SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVPOWEROFF);
-//				}
-//			}
+
+			switch (m_State)
+			{
+				// 
+			case DorsHW::POLL_RES::DropCassetteOutOfPosition:
+				GetInfoStatus::GetInstance()->fillResult();
+				SetManipulated();
+//SendCashUnitInfoChanged();
+				m_bCassetteMissing = true;
+				break;
+			case DorsHW::POLL_RES::Initialize:
+			{
+				if (m_bCassetteMissing) {
+					// Если кассету вернули обратно, а мы не в цикле инкасации то считаем это манипуляцией
+					if (!m_bExchangeInProgress) {
+						SetManipulated();
+					}
+					m_bCassetteMissing = false;
+//SendCashUnitInfoChanged();
+				}
+
+				m_pDevice->states_stack_transfer_enable(true);
+
+				auto idRefresResult = m_pDevice->Identification(m_idn);
+				if (DorsHW::RESULT::Ok == idRefresResult) {
+					m_bRefreshIdData = false;
+				}
+
+				if (m_PreviousState ==DorsHW::POLL_RES::Accepting) {
+//SendItemsPresented();
+				}
+			}
+			break;
+			case DorsHW::POLL_RES::DropCassetteFull:
+			{
+				if (DorsHW::POLL_RES::Returning == m_PreviousState
+					||DorsHW::POLL_RES::BillReturned == m_PreviousState
+					||DorsHW::_isRejCode(m_PreviousState)
+					) {
+//SendItemsTaken();
+				}
+//SendCashUnitInfoChanged();
+			}
+			break;
+			case DorsHW::POLL_RES::RejDensity:
+			case DorsHW::POLL_RES::RejBillInHead:
+			case DorsHW::POLL_RES::RejConveying:
+			case DorsHW::POLL_RES::RejIdentification:
+			case DorsHW::POLL_RES::RejInhibit:
+			case DorsHW::POLL_RES::RejFastFeed:
+			{
+//SendInputRefuse();
+			}
+			break;
+			case DorsHW::POLL_RES::RejInsertion:
+			case DorsHW::POLL_RES::RejLength:
+			case DorsHW::POLL_RES::RejMagnetic:
+			case DorsHW::POLL_RES::RejMultiplying:
+			case DorsHW::POLL_RES::RejOperation:
+			case DorsHW::POLL_RES::RejIAS:
+			case DorsHW::POLL_RES::RejNotebase:
+			case DorsHW::POLL_RES::RejUV:
+			case DorsHW::POLL_RES::RejTape:
+			case DorsHW::POLL_RES::RejEntryCassetteSns:
+			case DorsHW::POLL_RES::RejFastConveying:
+			case DorsHW::POLL_RES::RejTrayClosed:
+			case DorsHW::POLL_RES::RejTimeout:
+			case DorsHW::POLL_RES::RejUnknown:
+			{
+//SendInputRefuse();
+			}
+			break;
+			case DorsHW::POLL_RES::Accepting:
+			{
+//SendItemInserted();
+			}
+			break;
+			case DorsHW::POLL_RES::Idling:
+				if (!escrowManager_->IsCashInActive())
+				{
+					if (DorsHW::POLL_RES::Returning == m_PreviousState
+						||DorsHW::POLL_RES::BillReturned == m_PreviousState
+						||DorsHW::_isRejCode(m_PreviousState))
+					{
+//SendItemsTaken();
+					}
+				}
+				break;
+			case DorsHW::POLL_RES::UnitDisabled:
+				if (m_bNotesArePresented                                        // Если банкноты были представлены
+					&&
+					(                                                           // И предыдущее состояние было одним из:
+						DorsHW::POLL_RES::Returning == m_PreviousState
+						||DorsHW::POLL_RES::BillReturned == m_PreviousState
+						||DorsHW::_isRejCode(m_PreviousState)
+						)
+					) {
+					// Внимание! Если произошла инициализация устройства во время приёма банкноты и было сгенерировано событие 
+					// "банкнота предъявлена", то попав в UnitDisabled мы должны сгенерировать ItemsTaken.
+//SendItemsTaken();
+				}
+
+				// Если требуется обновить ID данных (после замены кассеты)
+				if (m_idn.IsEmpty() || m_bRefreshIdData) {                                          // Если ID данных нет, пробуем получить 
+					auto idRefresResult = m_pDevice->Identification(m_idn);     // Пробуем получить ID данные
+					if (DorsHW::RESULT::Ok == idRefresResult) {
+						m_bRefreshIdData = false;                           // Флаг обновления ID данных сброшен
+					}
+				}
+
+
+				//if (bRefreshCassetteHighLevel) {    // При старте ПО и при восстановлении связи с устройством 
+				//	if (m_AllNumberList.GetTotalNotesCount() >= m_ulThreshold) {    // Если кол-во купюр >= THRESHOLD, сообщить устройству, что достигли уровня HIGH
+				//		m_pDevice->CassetteHighLevel(true);                         // Инициируем установку HIGH флага в устройстве
+				//	}
+				//	else {
+				//		m_pDevice->CassetteHighLevel(false);
+				//	}
+				//	bRefreshCassetteHighLevel = false;                              // 
+				//}
+
+				break;
+			case DorsHW::POLL_RES::BillStacked:
+				if (m_PreviousState ==DorsHW::POLL_RES::Stacking)
+				{
+					AddAcceptedBanknote(m_usCurrentNoteID);
+
+					//FillCashInfo(m_cashUnitInfo);
+					if (m_usCurrentNoteID == 0) {
+						logger_->trace(std::format("{}() - В КАССЕТУ СКЛАДИРОВАНА: НЕРАСПОЗНАННАЯ БАНКНОТА", __FUNCTION__), LOGLEVEL1);
+					}
+					else {
+						logger_->trace(std::format("{}() - В КАССЕТУ СКЛАДИРОВАНА: БАНКНОТА С ИНДЕКСОМ {}", __FUNCTION__, m_usCurrentNoteID), LOGLEVEL1);
+					}
+				}
+				break;
+			case DorsHW::POLL_RES::Returning:
+			{
+				//if (!m_curRq) {
+					// Банкнота вернулась в не рамках отработки XFS запроса:
+					// 1. В результате автоматического аппаратного сброса
+					// 2. По escrow таймауту
+////////////////////////// if (GetinfoCashinStatus::GetInstance()->IsCashInActive()) {
+						//    GetinfoCashinStatus::GetInstance()->ResetNoteNumberList();
+						//}
+
+					if (escrowManager_->IsCashInActive()) {
+						escrowManager_->ResetNoteNumberList();
+					}
+				//}
+			}
+			break;
+			case DorsHW::POLL_RES::BillReturned:
+				// Для DBA отправка события только когда банкнота физически предъявлена.
+				// В состояние BillReturned попадаем в следующих случаях:
+				// 1. Rejecting -> BillReturned (предъявление банкноты после отбраковки)
+				// 2. Returning -> BillReturned (предъявление банкноты после возврата)
+//SendItemsPresented();
+				break;
+			case DorsHW::POLL_RES::Cheated:
+			{
+				// Производим единовременную рассылку событий USER_ERROR с предупреждением о попытке мошенничества
+				char pszMessage[] = "            CIM: CHEATED";
+				std::vector< BYTE > arrMessage(pszMessage, pszMessage + sizeof(pszMessage));
+//SendUserErrorEvent(GetLogicalServiceName().c_str(), WFS_ERR_ACT_NOACTION, arrMessage);
+
+			} break;
+
+			case DorsHW::POLL_RES::FishingDetected:	// Новое название по протоколу об. дан. DORS 210BA
+			{
+				if (DorsHW::POLL_RES::FishingDetected != m_PreviousState) {
+
+					AddFraudAttempt();
+
+					// Производим единовременную рассылку событий USER_ERROR с предупреждением о попытке мошенничества
+					char pszMessage[] = "            CIM: FRAUD DETECTED";
+					std::vector< BYTE > arrMessage(pszMessage, pszMessage + sizeof(pszMessage));
+//SendUserErrorEvent(GetLogicalServiceName().c_str(), WFS_ERR_ACT_NOACTION, arrMessage);
+				}
+			} break;
+			case DorsHW::POLL_RES::ValidatorJammed:
+			case DorsHW::POLL_RES::DropCassetteJammed:
+			case DorsHW::POLL_RES::StackMotorFail:
+			case DorsHW::POLL_RES::TransportMotorFail:
+			case DorsHW::POLL_RES::InitialCassetteStatusFail:
+			case DorsHW::POLL_RES::OpticCanalFail:
+			case DorsHW::POLL_RES::MagneticCanalFail:
+			case DorsHW::POLL_RES::StartTrayFailure:
+			case DorsHW::POLL_RES::Group47UnknownFailure:
+				// Любая ошибка оборудования в процессе приёма наличных - взводим ивент, извещающий об ошибке операции
+//SendHardwareErrorEvent(GetLogicalServiceName().c_str(), WFS_ERR_ACT_HWMAINT);
+//SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVHWERROR);
+				break;
+			case DorsHW::POLL_RES::PowerUp:
+			case DorsHW::POLL_RES::PowerUpWithBillInValidator:
+			case DorsHW::POLL_RES::PowerUpWithBillInStacker:
+			{
+				// Питание было сброшено
+				// Заказываем обновление флага HIGH
+				bRefreshCassetteHighLevel = true;
+
+				m_pDevice->Reset();
+				m_pDevice->states_stack_transfer_enable(true);
+
+			} break;
+			}
+
+			// Если зафиксирован переход из ErrPort
+			if ((m_PreviousState ==DorsHW::POLL_RES::PortError && !DorsHW::_isHWError(m_State)) || (DorsHW::_isHWError(m_PreviousState) && m_State !=DorsHW::POLL_RES::PortError && m_State !=DorsHW::POLL_RES::Initialize)) {
+
+				// если фиксируем переход из PortError - отправляем событие DEVICE STATUS CHANGED (DEV_ONLINE)
+				logger_->warn(std::format("{}() - ЗАФИКСИРОВАН ПЕРЕХОД ИЗ СОСТОЯНИЯ PORT_ERROR. ИНИЦИИРУЕМ РАССЫЛКУ СОБЫТИЙ DEVICE_STATUS_CHANGED (DEV_ONLINE)", __FUNCTION__), LOGLEVEL1);
+				//SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVONLINE);
+
+				// Требуем обновление версии прошивки и SN
+				m_bRefreshIdData = true;
+			}
+
+
+			// Команда ресет завершилось
+			if (m_PreviousState ==DorsHW::POLL_RES::Initialize && m_State ==DorsHW::POLL_RES::UnitDisabled) {
+				m_pDevice->m_bResetOperationInProgress = false;
+			}
+
+			// Если зафиксирован переход из ErrPort
+			if ((m_PreviousState ==DorsHW::POLL_RES::PortError && !DorsHW::_isHWError(m_State)) ||
+				(DorsHW::_isHWError(m_PreviousState) && m_State !=DorsHW::POLL_RES::PortError && m_State !=DorsHW::POLL_RES::Initialize)) {
+				// Если фиксируем переход из PortError - отправляем событие DEVICE STATUS CHANGED (DEV_ONLINE)
+
+			}
+
+			// Если фиксируем переход в PortError - отправляем событие DEVICE STATUS CHANGED (DEV_POWEROFF)
+			if (DorsHW::POLL_RES::PortError == m_State) {
+				std::lock_guard<std::mutex> lock{ m_mtx };
+				if (!m_pDevice->GetSoftwareConfigurationFault()) {
+//SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVNODEVICE);
+					logger_->warn(std::format("{}() - ЗАФИКСИРОВАН ПЕРЕХОД В СОСТОЯНИЕ PORTERROR. ИНИЦИИРУЕМ РАССЫЛКУ СОБЫТИЙ DEVICE_STATUS_CHANGED (DEV_POWEROFF)", __FUNCTION__), LOGLEVEL1);
+					m_pDevice->println(__FUNCTION__, "() - ЗАФИКСИРОВАН ПЕРЕХОД В СОСТОЯНИЕ PORTERROR. ИНИЦИИРУЕМ РАССЫЛКУ СОБЫТИЙ DEVICE_STATUS_CHANGED (DEV_POWEROFF)");
+//SendDeviceStatusEvent(GetLogicalServiceName().c_str(), WFS_CIM_DEVPOWEROFF);
+				}
+			}
 		}
 
 	}
@@ -1299,6 +1287,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 		}
 
 
+		StoreCashInLimits(request);
 		escrowManager_->OpenTransaction();
 
 		// Очищаем счетчик принятых предметов в начале каждой операции по внесению наличных, чтобы отслеживать только текущую операцию.
@@ -1307,8 +1296,258 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 		co_return XFS4IoTFramework::CashAcceptor::CashInStartResult(XFS4IoT::MessageHeader::CompletionCodeEnum::Success);
 	}
 
+	void CashAcceptorSample::StoreCashInLimits(
+		const XFS4IoTFramework::CashAcceptor::CashInStartRequest& request)
+	{
+		std::lock_guard lock(m_mtx);
+
+		cashInLimits_ = CashInLimits{};
+		cashInLimits_.totalItemsLimit = request.totalItemsLimit.value_or(0);
+
+		if (request.amountLimit.has_value())
+		{
+			cashInLimits_.amountLimit = request.amountLimit.value();
+		}
+	}
+
+	void CashAcceptorSample::ClearCashInLimits()
+	{
+		std::lock_guard lock(m_mtx);
+		cashInLimits_ = CashInLimits{};
+	}
+
+	CashAcceptorSample::CashInLimitFailure CashAcceptorSample::CheckCashInLimitsForNote(uint16_t noteId)
+	{
+		std::lock_guard lock(m_mtx);
+
+		if (cashInLimits_.totalItemsLimit > 0 &&
+			CurrentCashInTransactionItemCount() + 1 > cashInLimits_.totalItemsLimit)
+		{
+			return CashInLimitFailure::TotalItems;
+		}
+
+		if (noteId == 0 || cashInLimits_.amountLimit.empty())
+		{
+			return CashInLimitFailure::None;
+		}
+
+		for (const auto& [cashItemId, banknote] : allBanknoteIDs_)
+		{
+			if (banknote.GetNoteId() != noteId)
+			{
+				continue;
+			}
+
+			auto limit = cashInLimits_.amountLimit.find(banknote.GetCurrency());
+			if (limit == cashInLimits_.amountLimit.end() || limit->second <= 0.0)
+			{
+				return CashInLimitFailure::None;
+			}
+
+			if (CurrentCashInTransactionAmount(banknote.GetCurrency()) + banknote.GetValue() > limit->second)
+			{
+				return CashInLimitFailure::Amount;
+			}
+
+			return CashInLimitFailure::None;
+		}
+
+		return CashInLimitFailure::None;
+	}
+
+	long CashAcceptorSample::CurrentCashInTransactionItemCount()
+	{
+		long total = 0;
+
+		if (cashInStatus_ && cashInStatus_->GetCashCounts())
+		{
+			total += cashInStatus_->GetCashCounts()->GetUnrecognized();
+		}
+
+		if (acceptedItems_)
+		{
+			for (const auto& [cashItemId, count] : *acceptedItems_)
+			{
+				(void)cashItemId;
+				total += count.GetFit();
+				total += count.GetUnfit();
+				total += count.GetSuspect();
+				total += count.GetCounterfeit();
+				total += count.GetInked();
+			}
+		}
+
+		return total;
+	}
+
+	double CashAcceptorSample::CurrentCashInTransactionAmount(const std::string& currency)
+	{
+		double total = 0.0;
+
+		if (!acceptedItems_)
+		{
+			return total;
+		}
+
+		for (const auto& [cashItemId, count] : *acceptedItems_)
+		{
+			auto banknote = allBanknoteIDs_.find(cashItemId);
+			if (banknote == allBanknoteIDs_.end() || banknote->second.GetCurrency() != currency)
+			{
+				continue;
+			}
+
+			const auto itemCount =
+				count.GetFit() +
+				count.GetUnfit() +
+				count.GetSuspect() +
+				count.GetCounterfeit() +
+				count.GetInked();
+
+			total += banknote->second.GetValue() * itemCount;
+		}
+
+		return total;
+	}
+
+	std::optional<std::string> CashAcceptorSample::CashItemIdByNoteId(uint16_t noteId) const
+	{
+		if (noteId == 0)
+		{
+			return std::nullopt;
+		}
+
+		for (const auto& [cashItemId, banknote] : allBanknoteIDs_)
+		{
+			if (banknote.GetNoteId() == noteId)
+			{
+				return cashItemId;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	void CashAcceptorSample::AddAcceptedBanknote(
+		uint16_t noteId,
+		CashInLimitFailure *limitFailure,
+		bool *accepted,
+		int *unrecognized
+	)
+	{
+		if (accepted && *accepted)
+		{
+			return;
+		}
+
+		if (limitFailure)
+		{
+			*limitFailure = CheckCashInLimitsForNote(noteId);
+			if (*limitFailure != CashAcceptorSample::CashInLimitFailure::None)
+			{
+				return;
+			}
+		}
+
+		auto cashItemId = CashItemIdByNoteId(noteId);
+		if (!cashItemId)
+		{
+			AddUnrecognizedBanknote(limitFailure, accepted, unrecognized);
+			return;
+		}
+
+		const XFS4IoTFramework::Storage::CashItemCountClass itemCount(1, 0, 0, 0, 0);
+		currentCashInItems_[*cashItemId] += itemCount;
+		(*acceptedItems_)[*cashItemId] += itemCount;
+
+		XFS4IoTFramework::Storage::StorageCashCountClass cashCount(0, { { *cashItemId, itemCount } });
+		if (escrowManager_)
+		{
+			escrowManager_->AddNoteNumberList(cashCount);
+		}
+
+		if (accepted)
+			*accepted = true;
+
+		if (logger_)
+		{
+			logger_->trace(
+				std::format("{}() - принята банкнота noteId={}, cashItemId={}", __FUNCTION__, noteId, *cashItemId),
+				LOGLEVEL1);
+		}
+	}
+
+	nlohmann::json CashAcceptorSample::AcceptedNotesByNoteId() const
+	{
+		nlohmann::json notes = nlohmann::json::object();
+
+		for (const auto& [cashItemId, count] : *acceptedItems_)
+		{
+			auto banknote = allBanknoteIDs_.find(cashItemId);
+			if (banknote == allBanknoteIDs_.end() && cashItemId != "unrecognized")
+			{
+				continue;
+			}
+
+			const auto total =
+				count.GetFit() +
+				count.GetUnfit() +
+				count.GetSuspect() +
+				count.GetCounterfeit() +
+				count.GetInked();
+
+			if (total > 0)
+			{
+				if (cashItemId == "unrecognized") 
+					notes["unrecognized"] = total;
+				else 
+					notes[std::to_string(banknote->second.GetNoteId())] = total;
+			}
+		}
+
+		return notes;
+	}
+
+	void CashAcceptorSample::AddUnrecognizedBanknote(
+		CashInLimitFailure* limitFailure,
+		bool* accepted,
+		int* unrecognized
+	)
+	{
+		if (limitFailure)
+		{
+			*limitFailure = CheckCashInLimitsForNote(0);
+			if (*limitFailure != CashInLimitFailure::None)
+			{
+				return;
+			}
+		}
+
+
+
+		if (unrecognized)
+			++*unrecognized;
+
+		XFS4IoTFramework::Storage::StorageCashCountClass cashCount(1, {});
+		if (escrowManager_)
+		{
+			escrowManager_->AddNoteNumberList(cashCount);
+		}
+
+
+		if (accepted)
+			*accepted = true;
+
+		if (logger_)
+		{
+			logger_->trace(
+				std::format("{}() - принята нераспознанная банкнота", __FUNCTION__),
+				LOGLEVEL1);
+		}
+	}
+
 	//<summary>
-	//эта команда выполняет операцию по внесению наличных. 
+	//эта команда выполняет операцию по внесению наличных.
 	// В ответ на эту команду устройство должно идентифицировать и классифицировать внесенные предметы, 
 	// а также переместить их в складское устройство, если это необходимо. Результат операции по 
 	// внесению наличных возвращается в ответе на эту команду, а также может быть возвращен 
@@ -1417,6 +1656,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 
 		//Clear accepted items
 		acceptedItems_->clear();
+		ClearCashInLimits();
 
 		//Start thread to simulate cash taken by customer
 		std::jthread takenThread(&CashAcceptorSample::CashTakenThread, this);
@@ -1935,6 +2175,7 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 		}
 
 		acceptedItems_->clear();
+		ClearCashInLimits();
 
 		positionStatus_.SetTransport(XFS4IoTFramework::Common::CashManagementStatusClass::TransportEnum::Ok);
 		positionStatus_.SetShutter(XFS4IoTFramework::Common::CashManagementStatusClass::ShutterEnum::Closed);
@@ -2182,6 +2423,27 @@ namespace XFS4IoTSP::CashAcceptor::Sample
 	boost::asio::awaitable<XFS4IoTFramework::Storage::EndExchangeResult> CashAcceptorSample::EndExchangeAsync(std::stop_token cancellation)
 	{
 		return boost::asio::awaitable<XFS4IoTFramework::Storage::EndExchangeResult>();
+	}
+
+	void CashAcceptorSample::SetManipulated()
+	{
+		if (m_bDisableCuManipulated) {
+			return;
+		}
+
+		if (!m_bCassetteHasBeenReplaced) {
+			m_bCassetteHasBeenReplaced = true;
+			logger_->warn(std::format("{}() - CASSETTE MANIPULATED", __FUNCTION__), LOGLEVEL1);
+
+			PersistentDatasHandler::GetInstance()->setManipulatedFlag(1);
+		}
+	}
+
+	void CashAcceptorSample::AddFraudAttempt()
+	{
+		m_usFraudAttemptsCount++;
+		logger_->trace(std::format("FRAUD ATTEMPTS COUNT CHANGED: {}", m_usFraudAttemptsCount), LOGLEVEL1);
+		PersistentDatasHandler::GetInstance()->setFraudAttemptsCount(m_usFraudAttemptsCount);
 	}
 
 }

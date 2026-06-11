@@ -35,7 +35,6 @@ namespace XFS4IoTSP::CashAcceptor::Sample
             BuildMovementAndCommit();
 
         XFS4IoTFramework::Storage::StorageCashCountClass AcceptedStorageCount() const;
-        nlohmann::json AcceptedNotesByNoteId() const;
         std::string CashInStorageId() const;
         void UpdateStatusesAfterSuccess();
 

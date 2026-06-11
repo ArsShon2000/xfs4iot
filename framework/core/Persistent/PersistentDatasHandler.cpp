@@ -907,11 +907,7 @@ nlohmann::json PersistentDatasHandler::getCashInStatus(bool reloadFromFile)
 			cashInStatus_ = {
 				{"Status", 0},
 				{"NumOfRefused", 0},
-				{"Unrecognized", 0},
-				{"AcceptedItems", nlohmann::json::object()},
-				{"UnfitItems", nlohmann::json::object()},
-				{"DisputedItems", nlohmann::json::object()},
-				{"CashItemCount", nlohmann::json::object()}
+				{"NoteNumberList", nlohmann::json::object()}
 			};
 
 			update(CASH_IN_STATUS_PATH, cashInStatus_);
@@ -933,11 +929,7 @@ nlohmann::json PersistentDatasHandler::getCashInStatus(bool reloadFromFile)
 		cashInStatus_ = {
 			{"Status", 0},
 			{"NumOfRefused", 0},
-			{"Unrecognized", 0},
-			{"AcceptedItems", nlohmann::json::object()},
-			{"UnfitItems", nlohmann::json::object()},
-			{"DisputedItems", nlohmann::json::object()},
-			{"CashItemCount", nlohmann::json::object()}
+			{"NoteNumberList", nlohmann::json::object()},
 		};
 
 		return cashInStatus_;
@@ -988,27 +980,6 @@ bool PersistentDatasHandler::setCashInNumOfRefused(uint16_t count)
 		cashInStatus_["NumOfRefused"]);
 }
 
-uint16_t PersistentDatasHandler::getCashInUnrecognized(bool reloadFromFile)
-{
-	auto status = getCashInStatus(reloadFromFile);
-
-	if (!status.contains("Unrecognized") ||
-		!status["Unrecognized"].is_number_unsigned())
-	{
-		return 0;
-	}
-
-	return status["Unrecognized"].get<uint16_t>();
-}
-
-bool PersistentDatasHandler::setCashInUnrecognized(uint16_t count)
-{
-	return templateSetter(
-		CASH_IN_STATUS_UNRECOGNIZED_PATH,
-		count,
-		cashInStatus_["Unrecognized"]);
-}
-
 uint16_t PersistentDatasHandler::getCashInNumOfRefused(bool reloadFromFile)
 {
 	auto status = getCashInStatus(reloadFromFile);
@@ -1025,7 +996,7 @@ uint16_t PersistentDatasHandler::getCashInNumOfRefused(bool reloadFromFile)
 bool PersistentDatasHandler::setCashInCashItemCount(const nlohmann::json& count)
 {
 	return templateSetter(
-		CASH_IN_STATUS_CASH_ITEM_COUNT_PATH,
+		CASH_IN_STATUS_NOTE_NUMBER_LIST_PATH,
 		count,
 		cashInStatus_["CashItemCount"]);
 }
@@ -1034,44 +1005,13 @@ nlohmann::json PersistentDatasHandler::getCashInCashItemCount(bool reloadFromFil
 {
 	auto status = getCashInStatus(reloadFromFile);
 
-	if (!status.contains("CashItemCount") ||
-		!status["CashItemCount"].is_number_unsigned())
-	{
-		return 0;
-	}
-
-	return status["CashItemCount"].get<uint16_t>();
-}
-
-bool PersistentDatasHandler::setCashInAcceptedItems(const nlohmann::json& acceptedItems)
-{
-	try
-	{
-		if (!acceptedItems.is_object())
-			return false;
-
-		update(CASH_IN_STATUS_ACCEPTED_ITEMS_PATH, acceptedItems);
-		cashInStatus_["AcceptedItems"] = acceptedItems;
-
-		return true;
-	}
-	catch (...)
-	{
-		return false;
-	}
-}
-
-nlohmann::json PersistentDatasHandler::getCashInAcceptedItems(bool reloadFromFile)
-{
-	auto status = getCashInStatus(reloadFromFile);
-
-	if (!status.contains("AcceptedItems") ||
-		!status["AcceptedItems"].is_object())
+	if (!status.contains("NoteNumberList") ||
+		!status["NoteNumberList"].is_object())
 	{
 		return nlohmann::json::object();
 	}
 
-	return status["AcceptedItems"];
+	return status["NoteNumberList"];
 }
 
 bool PersistentDatasHandler::resetCashInStatus()
@@ -1079,11 +1019,7 @@ bool PersistentDatasHandler::resetCashInStatus()
 	nlohmann::json emptyStatus = {
 		{"Status", 0},
 		{"NumOfRefused", 0},
-		{"Unrecognized", 0},
-		{"AcceptedItems", nlohmann::json::object()},
-		{"UnfitItems", nlohmann::json::object()},
-		{"DisputedItems", nlohmann::json::object()},
-		{"CashItemCount", nlohmann::json::object()}
+		{"NoteNumberList", nlohmann::json::object()},
 	};
 
 	return setCashInStatus(emptyStatus);

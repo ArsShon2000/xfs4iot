@@ -70,7 +70,9 @@ namespace XFS4IoTSP::CashAcceptor::Sample
         void CloseTransaction(StatusEnum status);
 
         void AddRefusedBanknotes(uint16_t count);
-        void AddStorageCashCount(XFS4IoTFramework::Storage::StorageCashCountClass& cashUnit);
+        void AddNoteNumberList(XFS4IoTFramework::Storage::StorageCashCountClass& cashUnit);
+
+        void ResetNoteNumberList();
 
         void LoadTransactionStatus();
         void SaveTransactionStatus() const;

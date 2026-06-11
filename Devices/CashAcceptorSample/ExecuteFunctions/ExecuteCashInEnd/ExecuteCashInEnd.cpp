@@ -276,11 +276,12 @@ namespace XFS4IoTSP::CashAcceptor::Sample
             }
         }
 
-        PersistentDatasHandler::GetInstance()->addCashUnitNotes(AcceptedNotesByNoteId());
+        PersistentDatasHandler::GetInstance()->addCashUnitNotes(handler_->AcceptedNotesByNoteId());
         PersistentDatasHandler::GetInstance()->resetCashInStatus();
 
         handler_->acceptedItems_->clear();
         handler_->currentCashInItems_.clear();
+        handler_->ClearCashInLimits();
 
         return { { storageId, movementCount } };
     }
@@ -288,34 +289,6 @@ namespace XFS4IoTSP::CashAcceptor::Sample
     XFS4IoTFramework::Storage::StorageCashCountClass ExecuteCashInEnd::AcceptedStorageCount() const
     {
         return XFS4IoTFramework::Storage::StorageCashCountClass(0, *handler_->acceptedItems_);
-    }
-
-    nlohmann::json ExecuteCashInEnd::AcceptedNotesByNoteId() const
-    {
-        nlohmann::json notes = nlohmann::json::object();
-
-        for (const auto& [cashItemId, count] : *handler_->acceptedItems_)
-        {
-            auto banknote = handler_->allBanknoteIDs_.find(cashItemId);
-            if (banknote == handler_->allBanknoteIDs_.end())
-            {
-                continue;
-            }
-
-            const auto total =
-                count.GetFit() +
-                count.GetUnfit() +
-                count.GetSuspect() +
-                count.GetCounterfeit() +
-                count.GetInked();
-
-            if (total > 0)
-            {
-                notes[std::to_string(banknote->second.GetNoteId())] = total;
-            }
-        }
-
-        return notes;
     }
 
     std::string ExecuteCashInEnd::CashInStorageId() const

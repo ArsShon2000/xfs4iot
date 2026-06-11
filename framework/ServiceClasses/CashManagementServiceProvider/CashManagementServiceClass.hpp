@@ -4,6 +4,8 @@
 #include <memory>
 #include <unordered_map>
 #include <optional>
+#include <stdexcept>
+#include <utility>
 #include <boost/asio/awaitable.hpp>
 #include "CashInStatusClass.hpp"
 #include "../StorageServiceProvider/CashManagementPresentStatus.hpp"
@@ -151,22 +153,73 @@ namespace XFS4IoTServer
         virtual boost::asio::awaitable<void> ItemsTakenEventImpl(
             std::shared_ptr<void> payload)
         {
-            // Default no-op handler. Derived service classes may override to provide specific processing.
-            co_return;
+            if (!serviceProvider_)
+            {
+                throw std::runtime_error("CashManagementServiceClass::ItemsTakenEventImpl: serviceProvider_ is null");
+            }
+
+            auto typedPayload =
+                std::static_pointer_cast<XFS4IoT::CashManagement::Events::ItemsTakenEventPayloadData>(
+                    std::move(payload));
+
+            if (!typedPayload || !typedPayload->ValidateAdditionalBunches())
+            {
+                throw std::runtime_error("CashManagementServiceClass::ItemsTakenEventImpl: invalid payload");
+            }
+
+            auto event =
+                std::make_shared<XFS4IoT::CashManagement::Events::ItemsTakenEvent>(
+                    std::move(typedPayload));
+
+            co_await serviceProvider_->BroadcastEvent(event);
         }
 
         virtual boost::asio::awaitable<void> ItemsInsertedEventImpl(
             std::shared_ptr<void> payload)
         {
-            // Default no-op handler. Derived service classes may override to provide specific processing.
-            co_return;
+            if (!serviceProvider_)
+            {
+                throw std::runtime_error("CashManagementServiceClass::ItemsInsertedEventImpl: serviceProvider_ is null");
+            }
+
+            auto typedPayload =
+                std::static_pointer_cast<XFS4IoT::CashManagement::Events::ItemsInsertedEventPayloadData>(
+                    std::move(payload));
+
+            if (!typedPayload)
+            {
+                throw std::runtime_error("CashManagementServiceClass::ItemsInsertedEventImpl: invalid payload");
+            }
+
+            auto event =
+                std::make_shared<XFS4IoT::CashManagement::Events::ItemsInsertedEvent>(
+                    std::move(typedPayload));
+
+            co_await serviceProvider_->BroadcastEvent(event);
         }
 
         virtual boost::asio::awaitable<void> ItemsPresentedEventImpl(
             std::shared_ptr<void> payload)
         {
-            // Default no-op handler. Derived service classes may override to provide specific processing.
-            co_return;
+            if (!serviceProvider_)
+            {
+                throw std::runtime_error("CashManagementServiceClass::ItemsPresentedEventImpl: serviceProvider_ is null");
+            }
+
+            auto typedPayload =
+                std::static_pointer_cast<XFS4IoT::CashManagement::Events::ItemsPresentedEventPayloadData>(
+                    std::move(payload));
+
+            if (!typedPayload || !typedPayload->ValidateAdditionalBunches())
+            {
+                throw std::runtime_error("CashManagementServiceClass::ItemsPresentedEventImpl: invalid payload");
+            }
+
+            auto event =
+                std::make_shared<XFS4IoT::CashManagement::Events::ItemsPresentedEvent>(
+                    std::move(typedPayload));
+
+            co_await serviceProvider_->BroadcastEvent(event);
         }
 
         virtual boost::asio::awaitable<void> MediaDetectedEventImpl(
